@@ -1,0 +1,12 @@
+[package]
+name = "mustdown"
+version = "0.1.0"
+authors = ["Cuichen.Li <cuichen.li94@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+regex = "1"
+
+[[bin]]
+name = "mybin"
+path = "src/lib.rs"
