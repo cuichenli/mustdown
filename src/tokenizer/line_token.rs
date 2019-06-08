@@ -12,7 +12,7 @@ pub enum LineToken {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Tokenizer;
+    use crate::Tokenizer;
 
     #[test]
     fn test_line_scanner_header_token() {

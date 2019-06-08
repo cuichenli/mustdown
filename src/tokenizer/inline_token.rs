@@ -12,7 +12,7 @@ pub enum InlineToken {
 mod tests {
     use super::super::line_token::LineToken;
     use super::*;
-    use crate::parser::Tokenizer;
+    use crate::Tokenizer;
 
     #[test]
     fn test_special_token() {
