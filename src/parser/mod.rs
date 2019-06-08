@@ -1,3 +1,3 @@
-mod parser;
-pub use parser::Token;
-pub use parser::Tokenizer;
+mod tokenizer;
+
+pub use tokenizer::Tokenizer;
