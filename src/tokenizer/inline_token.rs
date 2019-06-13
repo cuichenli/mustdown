@@ -8,7 +8,7 @@ pub enum InlineToken {
     DoubleSpecialToken {
         token: char,
         inline_tokens: Vec<InlineToken>,
-    }
+    },
 }
 
 #[cfg(test)]
@@ -138,16 +138,19 @@ mod tests {
         let result = tokenizer.inline_scanner("**Test**");
         let token1 = &result[0];
         match token1 {
-            InlineToken::DoubleSpecialToken { token, inline_tokens } => {
+            InlineToken::DoubleSpecialToken {
+                token,
+                inline_tokens,
+            } => {
                 assert_eq!(token, &'*');
                 println!("{:?}", inline_tokens);
                 match &inline_tokens[0] {
                     InlineToken::TextToken(text) => {
                         assert_eq!(text, "Test");
-                    },
+                    }
                     _ => panic!(),
                 }
-            },
+            }
             _ => panic!(),
         };
     }
@@ -159,21 +162,24 @@ mod tests {
         assert_eq!(result.len(), 2);
         let token1 = &result[0];
         match token1 {
-            InlineToken::TextToken(text) => { assert_eq!(text, " ") },
-            _ => { panic!() }
+            InlineToken::TextToken(text) => assert_eq!(text, " "),
+            _ => panic!(),
         };
         let token2 = &result[1];
         match token2 {
-            InlineToken::DoubleSpecialToken { token, inline_tokens } => {
+            InlineToken::DoubleSpecialToken {
+                token,
+                inline_tokens,
+            } => {
                 assert_eq!(token, &'*');
                 println!("{:?}", inline_tokens);
                 match &inline_tokens[0] {
                     InlineToken::TextToken(text) => {
                         assert_eq!(text, "Test");
-                    },
+                    }
                     _ => panic!(),
                 }
-            },
+            }
             _ => panic!(),
         };
     }
