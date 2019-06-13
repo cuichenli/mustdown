@@ -3,25 +3,23 @@ extern crate regex;
 pub mod inline_token;
 pub mod line_token;
 
+pub use inline_token::InlineToken;
+pub use line_token::LineToken;
 use regex::Regex;
 use std::collections::HashMap;
-pub use line_token::LineToken;
-pub use inline_token::InlineToken;
-
 
 pub struct Tokenizer<'a> {
     text: &'a str,
-    special_tokens: HashMap<char, &'a str>
+    special_tokens: HashMap<char, &'a str>,
 }
 
-impl <'a> Tokenizer <'a> {
+impl<'a> Tokenizer<'a> {
     pub fn new(text: &'a str) -> Self {
-        let special_tokens: HashMap<char, &str> = [
-            ('#', "#"),
-            ('*', "\\*")].iter().cloned().collect();
+        let special_tokens: HashMap<char, &str> =
+            [('#', "#"), ('*', "\\*")].iter().cloned().collect();
         Self {
             text: text,
-            special_tokens: special_tokens
+            special_tokens: special_tokens,
         }
     }
 
@@ -39,17 +37,17 @@ impl <'a> Tokenizer <'a> {
 
                         let token = LineToken::HeaderToken {
                             level: level,
-                            inline_tokens: self.inline_scanner(inner_text)
+                            inline_tokens: self.inline_scanner(inner_text),
                         };
                         tokens.push(token);
-                    },
-                    None => ()
+                    }
+                    None => (),
                 }
-            },
-            _ => ()
+            }
+            _ => (),
         }
         tokens.push(LineToken::Paragraph {
-            inline_tokens: self.inline_scanner(inner_text)
+            inline_tokens: self.inline_scanner(inner_text),
         })
     }
 
@@ -63,7 +61,7 @@ impl <'a> Tokenizer <'a> {
             let token: InlineToken;
             if special_tokens.contains_key(&chars[i]) {
                 let c = special_tokens.get(&chars[i]).unwrap();
-                let re = Regex::new(&format!(r"[^\\]?({}).*? ({})", c, c)).unwrap();
+                let re = Regex::new(&format!(r"[^\\]?({}).*?({})", c, c)).unwrap();
                 let mut temp = i;
                 if i != 0 {
                     temp = i - 1;
@@ -71,18 +69,14 @@ impl <'a> Tokenizer <'a> {
                 let caps = re.find(&inline_text[temp..]);
                 match caps {
                     Some(mat) => {
-                        let start = if temp < i {
-                            3
-                        } else {
-                            2
-                        };
-                        let s = &mat.as_str()[start..mat.end()-2];
+                        let start = if temp < i { 2 } else { 1 };
+                        let s = &mat.as_str()[start..mat.end() - 1];
                         token = InlineToken::SpecialToken {
                             token: chars[i],
-                            inline_tokens: self.inline_scanner(s)
+                            inline_tokens: self.inline_scanner(s),
                         };
                         i = temp + (mat.end() as usize);
-                    },
+                    }
                     None => {
                         token = InlineToken::TextToken(chars[i].to_string());
                         i = i + 1;
