@@ -24,16 +24,29 @@ impl Parser {
                 inline_tokens: tokens,
             } => {
                 match t {
-                    '*' => {
-                        result.push_str(&"<b>");
+                    '*' | '_' => {
+                        result.push_str(&"<em>");
                         for t in tokens {
                             result.push_str(self.inline_parse(t).as_str());
                         }
-                        result.push_str(&"</b>");
+                        result.push_str(&"</em>");
                     }
                     _ => panic!(),
                 };
             }
+            InlineToken::DoubleSpecialToken {
+                token,
+                inline_tokens,
+            } => match token {
+                '*' | '_' => {
+                    result.push_str(&"<strong>");
+                    for t in inline_tokens {
+                        result.push_str(self.inline_parse(t).as_str());
+                    }
+                    result.push_str(&"</strong>");
+                }
+                _ => panic!(),
+            },
         };
         result
     }
@@ -77,7 +90,7 @@ mod test {
     pub use super::*;
 
     #[test]
-    fn test_inline_parsesr() {
+    fn test_inline_parser() {
         let parser = Parser { tokens: Vec::new() };
         let token = InlineToken::TextToken(String::from("this is a test"));
         let result = parser.inline_parse(&token);
@@ -85,18 +98,18 @@ mod test {
     }
 
     #[test]
-    fn test_bold_inline_parser() {
+    fn test_italic_inline_parser() {
         let parser = Parser { tokens: Vec::new() };
         let token = InlineToken::SpecialToken {
             token: '*',
             inline_tokens: vec![InlineToken::TextToken(String::from("this is a test"))],
         };
         let result = parser.inline_parse(&token);
-        assert_eq!("<b>this is a test</b>", result);
+        assert_eq!("<em>this is a test</em>", result);
     }
 
     #[test]
-    fn test_paragaph_parser() {
+    fn test_paragraph_parser() {
         let parser = Parser { tokens: Vec::new() };
         let token = LineToken::Paragraph {
             inline_tokens: vec![InlineToken::TextToken(String::from("this is a test"))],
@@ -106,7 +119,7 @@ mod test {
     }
 
     #[test]
-    fn test_paragaph_parser_with_multiple_inline_token() {
+    fn test_paragraph_parser_with_italic_inline_token() {
         let parser = Parser { tokens: Vec::new() };
         let token = LineToken::Paragraph {
             inline_tokens: vec![
@@ -118,6 +131,59 @@ mod test {
             ],
         };
         let result = parser.line_parse(&token);
-        assert_eq!("<p>\nthis is a test<b>another test</b></p>\n", result);
+        assert_eq!("<p>\nthis is a test<em>another test</em></p>\n", result);
+    }
+
+    #[test]
+    fn test_strong_inline_parser() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = InlineToken::DoubleSpecialToken {
+            token: '*',
+            inline_tokens: vec![InlineToken::TextToken(String::from("this is a test"))],
+        };
+        let result = parser.inline_parse(&token);
+        assert_eq!("<strong>this is a test</strong>", result);
+    }
+
+    #[test]
+    fn test_paragraph_parser_with_strong_inline_token() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = LineToken::Paragraph {
+            inline_tokens: vec![
+                InlineToken::TextToken(String::from("this is a test")),
+                InlineToken::DoubleSpecialToken {
+                    token: '*',
+                    inline_tokens: vec![InlineToken::TextToken(String::from("another test"))],
+                },
+            ],
+        };
+        let result = parser.line_parse(&token);
+        assert_eq!(
+            "<p>\nthis is a test<strong>another test</strong></p>\n",
+            result
+        );
+    }
+
+    #[test]
+    fn test_paragraph_parser_with_strong_and_italic_inline_token() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = LineToken::Paragraph {
+            inline_tokens: vec![
+                InlineToken::TextToken(String::from("this is a test")),
+                InlineToken::DoubleSpecialToken {
+                    token: '*',
+                    inline_tokens: vec![InlineToken::TextToken(String::from("another test"))],
+                },
+                InlineToken::SpecialToken {
+                    token: '*',
+                    inline_tokens: vec![InlineToken::TextToken(String::from("another test"))],
+                },
+            ],
+        };
+        let result = parser.line_parse(&token);
+        assert_eq!(
+            "<p>\nthis is a test<strong>another test</strong><em>another test</em></p>\n",
+            result
+        );
     }
 }
