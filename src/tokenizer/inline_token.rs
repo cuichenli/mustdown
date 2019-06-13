@@ -1,9 +1,14 @@
+#[derive(Debug)]
 pub enum InlineToken {
     TextToken(String),
     SpecialToken {
         token: char,
         inline_tokens: Vec<InlineToken>,
     },
+    DoubleSpecialToken {
+        token: char,
+        inline_tokens: Vec<InlineToken>,
+    }
 }
 
 #[cfg(test)]
@@ -123,6 +128,52 @@ mod tests {
         };
         match &tokens[2] {
             InlineToken::TextToken(text) => assert_eq!(text, &" another test"),
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_double_special_token() {
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner("**Test**");
+        let token1 = &result[0];
+        match token1 {
+            InlineToken::DoubleSpecialToken { token, inline_tokens } => {
+                assert_eq!(token, &'*');
+                println!("{:?}", inline_tokens);
+                match &inline_tokens[0] {
+                    InlineToken::TextToken(text) => {
+                        assert_eq!(text, "Test");
+                    },
+                    _ => panic!(),
+                }
+            },
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_double_special_token_with_start_space() {
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(" **Test**");
+        assert_eq!(result.len(), 2);
+        let token1 = &result[0];
+        match token1 {
+            InlineToken::TextToken(text) => { assert_eq!(text, " ") },
+            _ => { panic!() }
+        };
+        let token2 = &result[1];
+        match token2 {
+            InlineToken::DoubleSpecialToken { token, inline_tokens } => {
+                assert_eq!(token, &'*');
+                println!("{:?}", inline_tokens);
+                match &inline_tokens[0] {
+                    InlineToken::TextToken(text) => {
+                        assert_eq!(text, "Test");
+                    },
+                    _ => panic!(),
+                }
+            },
             _ => panic!(),
         };
     }

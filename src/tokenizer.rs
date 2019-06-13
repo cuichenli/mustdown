@@ -16,7 +16,7 @@ pub struct Tokenizer<'a> {
 impl<'a> Tokenizer<'a> {
     pub fn new(text: &'a str) -> Self {
         let special_tokens: HashMap<char, &str> =
-            [('#', "#"), ('*', "\\*")].iter().cloned().collect();
+            [('_', "_"), ('*', "\\*")].iter().cloned().collect();
         Self {
             text: text,
             special_tokens: special_tokens,
@@ -61,7 +61,7 @@ impl<'a> Tokenizer<'a> {
             let token: InlineToken;
             if special_tokens.contains_key(&chars[i]) {
                 let c = special_tokens.get(&chars[i]).unwrap();
-                let re = Regex::new(&format!(r"[^\\]?({}).*?({})", c, c)).unwrap();
+                let re = Regex::new(&format!(r"[^\\]?({}{}).*?({}{})", c, c, c, c)).unwrap();
                 let mut temp = i;
                 if i != 0 {
                     temp = i - 1;
@@ -69,17 +69,32 @@ impl<'a> Tokenizer<'a> {
                 let caps = re.find(&inline_text[temp..]);
                 match caps {
                     Some(mat) => {
-                        let start = if temp < i { 2 } else { 1 };
+                        let start = if temp < i { 3 } else { 2 };
                         let s = &mat.as_str()[start..mat.end() - 1];
-                        token = InlineToken::SpecialToken {
+                        token = InlineToken::DoubleSpecialToken {
                             token: chars[i],
                             inline_tokens: self.inline_scanner(s),
                         };
                         i = temp + (mat.end() as usize);
                     }
                     None => {
-                        token = InlineToken::TextToken(chars[i].to_string());
-                        i = i + 1;
+                        let re = Regex::new(&format!(r"[^\\]?({}).*?({})", c, c)).unwrap();
+                        let caps = re.find(&inline_text[temp..]);
+                        match caps {
+                            Some(mat) => {
+                                let start = if temp < i { 2 } else { 1 };
+                                let s = &mat.as_str()[start..mat.end() - 1];
+                                token = InlineToken::SpecialToken {
+                                    token: chars[i],
+                                    inline_tokens: self.inline_scanner(s),
+                                };
+                                i = temp + (mat.end() as usize);
+                            }
+                            None => {
+                                token = InlineToken::TextToken(chars[i].to_string());
+                                i = i + 1;
+                            }
+                        }
                     }
                 }
             } else {
