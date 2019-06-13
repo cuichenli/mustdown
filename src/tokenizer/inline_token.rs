@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub enum InlineToken {
     TextToken(String),
     SpecialToken {
@@ -143,7 +142,6 @@ mod tests {
                 inline_tokens,
             } => {
                 assert_eq!(token, &'*');
-                println!("{:?}", inline_tokens);
                 match &inline_tokens[0] {
                     InlineToken::TextToken(text) => {
                         assert_eq!(text, "Test");
@@ -172,7 +170,6 @@ mod tests {
                 inline_tokens,
             } => {
                 assert_eq!(token, &'*');
-                println!("{:?}", inline_tokens);
                 match &inline_tokens[0] {
                     InlineToken::TextToken(text) => {
                         assert_eq!(text, "Test");
@@ -183,4 +180,27 @@ mod tests {
             _ => panic!(),
         };
     }
+
+    #[test]
+    fn test_code_special_token() {
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner("`Test`");
+        let token1 = &result[0];
+        match token1 {
+            InlineToken::SpecialToken {
+                token,
+                inline_tokens,
+            } => {
+                assert_eq!(token, &'`');
+                match &inline_tokens[0] {
+                    InlineToken::TextToken(text) => {
+                        assert_eq!(text, "Test");
+                    }
+                    _ => panic!(),
+                }
+            }
+            _ => panic!(),
+        };
+    }
+
 }

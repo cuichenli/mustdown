@@ -31,6 +31,13 @@ impl Parser {
                         }
                         result.push_str(&"</em>");
                     }
+                    '`' => {
+                        result.push_str(&"<code>");
+                        for t in tokens {
+                            result.push_str(self.inline_parse(t).as_str());
+                        }
+                        result.push_str("</code>")
+                    }
                     _ => panic!(),
                 };
             }
@@ -143,6 +150,17 @@ mod test {
         };
         let result = parser.inline_parse(&token);
         assert_eq!("<strong>this is a test</strong>", result);
+    }
+
+    #[test]
+    fn test_code_inline_parser() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = InlineToken::SpecialToken {
+            token: '`',
+            inline_tokens: vec![InlineToken::TextToken(String::from("this is a test"))],
+        };
+        let result = parser.inline_parse(&token);
+        assert_eq!("<code>this is a test</code>", result);
     }
 
     #[test]

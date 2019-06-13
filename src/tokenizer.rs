@@ -15,8 +15,10 @@ pub struct Tokenizer<'a> {
 
 impl<'a> Tokenizer<'a> {
     pub fn new(text: &'a str) -> Self {
-        let special_tokens: HashMap<char, &str> =
-            [('_', "_"), ('*', "\\*")].iter().cloned().collect();
+        let special_tokens: HashMap<char, &str> = [('_', "_"), ('*', "\\*"), ('`', "`")]
+            .iter()
+            .cloned()
+            .collect();
         Self {
             text: text,
             special_tokens: special_tokens,
