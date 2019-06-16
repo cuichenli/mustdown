@@ -4,7 +4,7 @@ pub mod inline_token;
 pub mod line_token;
 
 pub use inline_token::{InlineToken, DoubleSpecialToken, SpecialToken, TextToken};
-pub use line_token::{LineToken, Paragraph, HeaderToken};
+pub use line_token::{LineToken, Paragraph, HeaderToken, CodeBlock};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -45,13 +45,19 @@ impl<'a> Tokenizer<'a> {
                     }
                     None => (),
                 }
-            }
+            },
             _ => (),
         }
         let token = LineToken::Paragraph(Paragraph {
             inline_tokens: self.inline_scanner(inner_text),
         });
         tokens.push(token);
+    }
+
+    pub fn block_parser(&self, lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+        let text = lines.join("\n");
+        let block = CodeBlock::new(text);
+        tokens.push(LineToken::CodeBlock(block));
     }
 
     pub fn inline_scanner(&self, inline_text: &str) -> Vec<InlineToken> {
@@ -117,8 +123,21 @@ impl<'a> Tokenizer<'a> {
         let mut result: Vec<LineToken> = Vec::new();
         let lines = self.text.split("\n");
         let lines: Vec<&str> = lines.collect();
-        for line in lines {
-            &mut self.line_scanner(line, &mut result);
+        let mut i: usize = 0;
+        while i < lines.len() {
+            let line = lines[i];
+            if line == "```" {
+                let mut block: Vec<&str> = Vec::new();
+                i += 1;
+                while i < lines.len() && lines[i] != "```" {
+                    block.push(lines[i]);
+                    i += 1;
+                }
+                self.block_parser(&block, &mut result);
+            } else {
+                self.line_scanner(&line, &mut result);
+            }
+            i += 1;
         }
         result
     }

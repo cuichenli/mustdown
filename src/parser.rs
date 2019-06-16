@@ -74,7 +74,13 @@ impl Parser {
                     result.push_str(self.inline_parse(t).as_str());
                 }
                 result.push_str(&format!("</p>\n"));
-            }
+            },
+            LineToken::CodeBlock(token) => {
+                result.push_str("<pre><code>\n");
+                result.push_str(&token.text);
+                result.push_str("\n</code></pre>");
+            },
+            _ => panic!()
         }
         result
     }
@@ -92,6 +98,7 @@ impl Parser {
 mod test {
 
     pub use super::*;
+    use crate::tokenizer::CodeBlock;
 
     #[test]
     fn test_inline_parser() {
@@ -206,5 +213,14 @@ mod test {
             "<p>\nthis is a test<strong>another test</strong><em>another test</em></p>\n",
             result
         );
+    }
+
+    #[test]
+    fn test_code_block() {
+        let parser = Parser { tokens: Vec::new() };
+        let text = "this\nis\na\ntest";
+        let token = CodeBlock::new(text.to_string());
+        let result = parser.line_parse(&LineToken::CodeBlock(token));
+        assert_eq!("<pre><code>\nthis\nis\na\ntest\n</code></pre>", result);
     }
 }
