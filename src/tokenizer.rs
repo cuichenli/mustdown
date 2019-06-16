@@ -3,8 +3,8 @@ extern crate regex;
 pub mod inline_token;
 pub mod line_token;
 
-pub use inline_token::InlineToken;
-pub use line_token::LineToken;
+pub use inline_token::{InlineToken, DoubleSpecialToken, SpecialToken, TextToken};
+pub use line_token::{LineToken, Paragraph, HeaderToken};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -20,8 +20,8 @@ impl<'a> Tokenizer<'a> {
             .cloned()
             .collect();
         Self {
-            text: text,
-            special_tokens: special_tokens,
+            text,
+            special_tokens,
         }
     }
 
@@ -37,20 +37,21 @@ impl<'a> Tokenizer<'a> {
                         let level = v.get(1).unwrap().as_str().len();
                         inner_text = v.get(2).unwrap().as_str();
 
-                        let token = LineToken::HeaderToken {
-                            level: level,
+                        let token = HeaderToken {
+                            level,
                             inline_tokens: self.inline_scanner(inner_text),
                         };
-                        tokens.push(token);
+                        tokens.push(LineToken::HeaderToken(token));
                     }
                     None => (),
                 }
             }
             _ => (),
         }
-        tokens.push(LineToken::Paragraph {
+        let token = LineToken::Paragraph(Paragraph {
             inline_tokens: self.inline_scanner(inner_text),
-        })
+        });
+        tokens.push(token);
     }
 
     pub fn inline_scanner(&self, inline_text: &str) -> Vec<InlineToken> {
@@ -73,10 +74,10 @@ impl<'a> Tokenizer<'a> {
                     Some(mat) => {
                         let start = if temp < i { 3 } else { 2 };
                         let s = &mat.as_str()[start..mat.end() - 1];
-                        token = InlineToken::DoubleSpecialToken {
+                        token = InlineToken::DoubleSpecialToken(DoubleSpecialToken {
                             token: chars[i],
                             inline_tokens: self.inline_scanner(s),
-                        };
+                        });
                         i = temp + (mat.end() as usize);
                     }
                     None => {
@@ -86,14 +87,14 @@ impl<'a> Tokenizer<'a> {
                             Some(mat) => {
                                 let start = if temp < i { 2 } else { 1 };
                                 let s = &mat.as_str()[start..mat.end() - 1];
-                                token = InlineToken::SpecialToken {
+                                token = InlineToken::SpecialToken(SpecialToken {
                                     token: chars[i],
                                     inline_tokens: self.inline_scanner(s),
-                                };
+                                });
                                 i = temp + (mat.end() as usize);
                             }
                             None => {
-                                token = InlineToken::TextToken(chars[i].to_string());
+                                token = InlineToken::TextToken(TextToken { text: chars[i].to_string()});
                                 i = i + 1;
                             }
                         }
@@ -104,7 +105,7 @@ impl<'a> Tokenizer<'a> {
                 while temp < n && !special_tokens.contains_key(&chars[temp]) {
                     temp += 1;
                 }
-                token = InlineToken::TextToken(inline_text[i..temp].to_string());
+                token = InlineToken::TextToken(TextToken{ text: inline_text[i..temp].to_string()});
                 i = temp;
             }
             tokens.push(token);

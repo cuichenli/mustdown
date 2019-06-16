@@ -1,13 +1,21 @@
 pub enum InlineToken {
-    TextToken(String),
-    SpecialToken {
-        token: char,
-        inline_tokens: Vec<InlineToken>,
-    },
-    DoubleSpecialToken {
-        token: char,
-        inline_tokens: Vec<InlineToken>,
-    },
+    TextToken(TextToken),
+    SpecialToken(SpecialToken),
+    DoubleSpecialToken(DoubleSpecialToken),
+}
+
+pub struct  TextToken {
+    pub text: String
+}
+
+pub struct SpecialToken {
+    pub token: char,
+    pub inline_tokens: Vec<InlineToken>
+}
+
+pub struct DoubleSpecialToken {
+    pub token: char,
+    pub inline_tokens: Vec<InlineToken>,
 }
 
 #[cfg(test)]
@@ -22,8 +30,8 @@ mod tests {
         let result = tokenizer.scanner();
         let inline_tokens: &Vec<InlineToken>;
         match &result[0] {
-            LineToken::Paragraph { inline_tokens: i } => {
-                inline_tokens = i;
+            LineToken::Paragraph(token)  => {
+                inline_tokens = &token.inline_tokens;
             }
             _ => panic!(),
         };
@@ -31,19 +39,16 @@ mod tests {
         let result = &inline_tokens[0];
         let inline_tokens: &Vec<InlineToken>;
         match result {
-            InlineToken::SpecialToken {
-                token: t,
-                inline_tokens: i,
-            } => {
-                assert_eq!(*t, '*');
-                assert_eq!(i.len(), 1);
-                inline_tokens = i;
+            InlineToken::SpecialToken(token) => {
+                assert_eq!(token.token, '*');
+                assert_eq!(token.inline_tokens.len(), 1);
+                inline_tokens = &token.inline_tokens;
             }
             _ => panic!(),
         };
         match &inline_tokens[0] {
             InlineToken::TextToken(text) => {
-                assert_eq!(text, "Test");
+                assert_eq!(text.text, "Test");
             }
             _ => panic!(),
         };
@@ -55,8 +60,8 @@ mod tests {
         let result = tokenizer.scanner();
         let inline_tokens: &Vec<InlineToken>;
         match &result[0] {
-            LineToken::Paragraph { inline_tokens: i } => {
-                inline_tokens = i;
+            LineToken::Paragraph(token) => {
+                inline_tokens = &token.inline_tokens;
             }
             _ => panic!(),
         };
@@ -65,25 +70,22 @@ mod tests {
         let text_token = &inline_tokens[0];
         match text_token {
             InlineToken::TextToken(text) => {
-                assert_eq!(text, " ");
+                assert_eq!(text.text, " ");
             }
             _ => panic!(),
         };
         let inline_tokens: &Vec<InlineToken>;
         match result {
-            InlineToken::SpecialToken {
-                token: t,
-                inline_tokens: i,
-            } => {
-                assert_eq!(*t, '*');
-                assert_eq!(i.len(), 1);
-                inline_tokens = i;
+            InlineToken::SpecialToken(token) => {
+                assert_eq!(token.token, '*');
+                assert_eq!(token.inline_tokens.len(), 1);
+                inline_tokens = &token.inline_tokens;
             }
             _ => panic!(),
         };
         match &inline_tokens[0] {
             InlineToken::TextToken(text) => {
-                assert_eq!(text, "Test");
+                assert_eq!(text.text, "Test");
             }
             _ => panic!(),
         };
@@ -97,28 +99,25 @@ mod tests {
         let inline_token = &result[0];
         let tokens: &Vec<InlineToken>;
         match inline_token {
-            LineToken::Paragraph { inline_tokens: t } => {
-                tokens = &t;
+            LineToken::Paragraph(token) => {
+                tokens = &token.inline_tokens;
             }
             _ => panic!(),
         };
         assert_eq!(tokens.len(), 3);
         match &tokens[0] {
             InlineToken::TextToken(text) => {
-                assert_eq!(text, &" ");
+                assert_eq!(text.text, " ");
             }
             _ => panic!(),
         };
         match &tokens[1] {
-            InlineToken::SpecialToken {
-                token: t,
-                inline_tokens: ts,
-            } => {
-                assert_eq!(t, &'*');
-                assert_eq!(ts.len(), 1);
-                match &ts[0] {
+            InlineToken::SpecialToken(token) => {
+                assert_eq!(token.token, '*');
+                assert_eq!(token.inline_tokens.len(), 1);
+                match &token.inline_tokens[0] {
                     InlineToken::TextToken(text) => {
-                        assert_eq!(text, &"Test");
+                        assert_eq!(text.text, "Test");
                     }
                     _ => panic!(),
                 };
@@ -126,7 +125,7 @@ mod tests {
             _ => panic!(),
         };
         match &tokens[2] {
-            InlineToken::TextToken(text) => assert_eq!(text, &" another test"),
+            InlineToken::TextToken(text) => assert_eq!(text.text, " another test"),
             _ => panic!(),
         };
     }
@@ -137,14 +136,11 @@ mod tests {
         let result = tokenizer.inline_scanner("**Test**");
         let token1 = &result[0];
         match token1 {
-            InlineToken::DoubleSpecialToken {
-                token,
-                inline_tokens,
-            } => {
-                assert_eq!(token, &'*');
-                match &inline_tokens[0] {
+            InlineToken::DoubleSpecialToken(token) => {
+                assert_eq!(token.token, '*');
+                match &token.inline_tokens[0] {
                     InlineToken::TextToken(text) => {
-                        assert_eq!(text, "Test");
+                        assert_eq!(text.text, "Test");
                     }
                     _ => panic!(),
                 }
@@ -160,19 +156,16 @@ mod tests {
         assert_eq!(result.len(), 2);
         let token1 = &result[0];
         match token1 {
-            InlineToken::TextToken(text) => assert_eq!(text, " "),
+            InlineToken::TextToken(text) => assert_eq!(text.text, " "),
             _ => panic!(),
         };
         let token2 = &result[1];
         match token2 {
-            InlineToken::DoubleSpecialToken {
-                token,
-                inline_tokens,
-            } => {
-                assert_eq!(token, &'*');
-                match &inline_tokens[0] {
+            InlineToken::DoubleSpecialToken(token) => {
+                assert_eq!(token.token, '*');
+                match &token.inline_tokens[0] {
                     InlineToken::TextToken(text) => {
-                        assert_eq!(text, "Test");
+                        assert_eq!(text.text, "Test");
                     }
                     _ => panic!(),
                 }
@@ -187,14 +180,11 @@ mod tests {
         let result = tokenizer.inline_scanner("`Test`");
         let token1 = &result[0];
         match token1 {
-            InlineToken::SpecialToken {
-                token,
-                inline_tokens,
-            } => {
-                assert_eq!(token, &'`');
-                match &inline_tokens[0] {
+            InlineToken::SpecialToken(token)  => {
+                assert_eq!(token.token, '`');
+                match &token.inline_tokens[0] {
                     InlineToken::TextToken(text) => {
-                        assert_eq!(text, "Test");
+                        assert_eq!(text.text, "Test");
                     }
                     _ => panic!(),
                 }
