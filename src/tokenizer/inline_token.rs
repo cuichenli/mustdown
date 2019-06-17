@@ -2,6 +2,8 @@ pub enum InlineToken {
     TextToken(TextToken),
     SpecialToken(SpecialToken),
     DoubleSpecialToken(DoubleSpecialToken),
+    LinkToken(LinkToken),
+    ImageToken(ImageToken)
 }
 
 pub struct  TextToken {
@@ -16,6 +18,16 @@ pub struct SpecialToken {
 pub struct DoubleSpecialToken {
     pub token: char,
     pub inline_tokens: Vec<InlineToken>,
+}
+
+pub struct LinkToken {
+    pub link: String,
+    pub alt: String
+}
+
+pub struct ImageToken {
+    pub link: String,
+    pub alt: String
 }
 
 #[cfg(test)]
@@ -191,6 +203,104 @@ mod tests {
             }
             _ => panic!(),
         };
+    }
+
+
+    #[test]
+    fn test_link_token() {
+        let text = "[Link](http://a.com)";
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(text);
+        assert_eq!(result.len(), 1);
+        let token = &result[0];
+        match token {
+            InlineToken::LinkToken(token) => {
+                assert_eq!(token.alt, "Link");
+                assert_eq!(token.link, "http://a.com");
+            },
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_link_token_with_surround_text() {
+        let text = "this is [Link](to_test) to test";
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(text);
+        assert_eq!(result.len(), 3);
+        let token = &result[0];
+        if let InlineToken::TextToken(token) = token {
+            assert_eq!(token.text, "this is ");
+        } else {
+            panic!();
+        }
+        if let InlineToken::LinkToken(token) = &result[1] {
+            assert_eq!(token.alt, "Link");
+            assert_eq!(token.link, "to_test");
+        } else {
+            panic!()
+        }
+        if let InlineToken::TextToken(token) = &result[2] {
+            assert_eq!(token.text, " to test");
+        } else {
+            panic!()
+        }
+    }
+
+    #[test]
+    fn test_image_token() {
+        let text = "![Link](http://a.com)";
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(text);
+        assert_eq!(result.len(), 1);
+        let token = &result[0];
+        match token {
+            InlineToken::ImageToken(token) => {
+                assert_eq!(token.alt, "Link");
+                assert_eq!(token.link, "http://a.com");
+            },
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_image_token_with_surround_text() {
+        let text = "this is ![Link](to_test) to test";
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(text);
+        assert_eq!(result.len(), 3);
+        let token = &result[0];
+        if let InlineToken::TextToken(token) = token {
+            assert_eq!(token.text, "this is ");
+        } else {
+            panic!();
+        }
+        if let InlineToken::ImageToken(token) = &result[1] {
+            assert_eq!(token.alt, "Link");
+            assert_eq!(token.link, "to_test");
+        } else {
+            panic!()
+        }
+        if let InlineToken::TextToken(token) = &result[2] {
+            assert_eq!(token.text, " to test");
+        } else {
+            panic!()
+        }
+    }
+
+    #[test]
+    fn test_all_special_tokens_with_no_usage() {
+        let text = "![*_`";
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(text);
+        assert_eq!(result.len(), 5);
+        for i in 0..text.len() {
+            if let InlineToken::TextToken(token) = &result[i] {
+                assert_eq!(token.text, text.get(i..i+1).unwrap()) ;
+            } else {
+                panic!()
+            }
+        }
     }
 
 }

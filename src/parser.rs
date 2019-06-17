@@ -1,4 +1,4 @@
-pub use super::tokenizer::inline_token::{InlineToken, SpecialToken, DoubleSpecialToken, TextToken};
+pub use super::tokenizer::inline_token::{InlineToken, SpecialToken, DoubleSpecialToken, TextToken, ImageToken, LinkToken};
 pub use super::tokenizer::line_token::{LineToken, HeaderToken, Paragraph};
 pub use super::tokenizer::Tokenizer;
 
@@ -52,6 +52,13 @@ impl Parser {
                     _ => panic!(),
                 }
             },
+            InlineToken::ImageToken(token) => {
+                result.push_str(format!("<img src=\"{}\" alt=\"{}\">", token.link, token.alt).as_str());
+            },
+            InlineToken::LinkToken(token) => {
+                result.push_str(format!("<a href=\"{}\">{}</a>", token.link, token.alt).as_str());
+            }
+            _ => panic!(),
         };
         result
     }
@@ -222,5 +229,29 @@ mod test {
         let token = CodeBlock::new(text.to_string());
         let result = parser.line_parse(&LineToken::CodeBlock(token));
         assert_eq!("<pre><code>\nthis\nis\na\ntest\n</code></pre>", result);
+    }
+
+    #[test]
+    fn test_image_token() {
+        let parser = Parser { tokens: Vec::new() };
+        let image_token = ImageToken {
+            link: String::from("link"),
+            alt: String::from("alt")
+        };
+        let token = InlineToken::ImageToken(image_token);
+        let result = parser.inline_parse(&token);
+        assert_eq!("<img src=\"link\" alt=\"alt\">", result);
+    }
+
+    #[test]
+    fn test_link_token() {
+        let parser = Parser { tokens: Vec::new() };
+        let link_token = LinkToken {
+            link: String::from("link"),
+            alt: String::from("alt")
+        };
+        let token = InlineToken::LinkToken(link_token);
+        let result = parser.inline_parse(&token);
+        assert_eq!("<a href=\"link\">alt</a>", result);
     }
 }
