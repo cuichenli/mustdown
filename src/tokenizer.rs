@@ -3,8 +3,10 @@ extern crate regex;
 pub mod inline_token;
 pub mod line_token;
 
-pub use inline_token::{InlineToken, DoubleSpecialToken, SpecialToken, TextToken, LinkToken, ImageToken};
-pub use line_token::{LineToken, Paragraph, HeaderToken, CodeBlock, Quote};
+pub use inline_token::{
+    DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken,
+};
+pub use line_token::{CodeBlock, HeaderToken, LineToken, Paragraph, Quote};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -15,11 +17,11 @@ pub struct Tokenizer<'a> {
 
 impl<'a> Tokenizer<'a> {
     pub fn new(text: &'a str) -> Self {
-        let special_tokens: HashMap<char, &str> = [
-            ('_', "_"), ('*', "\\*"), ('`', "`"), ('[', "["), ('!', "!")]
-            .iter()
-            .cloned()
-            .collect();
+        let special_tokens: HashMap<char, &str> =
+            [('_', "_"), ('*', "\\*"), ('`', "`"), ('[', "["), ('!', "!")]
+                .iter()
+                .cloned()
+                .collect();
         Self {
             text,
             special_tokens,
@@ -46,7 +48,7 @@ impl<'a> Tokenizer<'a> {
                     }
                     None => (),
                 }
-            },
+            }
             _ => (),
         }
         let token = LineToken::Paragraph(Paragraph {
@@ -68,9 +70,7 @@ impl<'a> Tokenizer<'a> {
             inline_tokens.push(InlineToken::BreakToken);
         }
         inline_tokens.pop();
-        let token = Quote {
-            inline_tokens
-        };
+        let token = Quote { inline_tokens };
         tokens.push(LineToken::Quote(token));
     }
 
@@ -93,10 +93,12 @@ impl<'a> Tokenizer<'a> {
                             let alt = String::from(mat.get(1).unwrap().as_str());
                             let link = String::from(mat.get(2).unwrap().as_str());
                             i = i + length;
-                            token = InlineToken::LinkToken( LinkToken{ link, alt} );
-                        },
+                            token = InlineToken::LinkToken(LinkToken { link, alt });
+                        }
                         None => {
-                            token = InlineToken::TextToken(TextToken{ text: chars[i].to_string() } );
+                            token = InlineToken::TextToken(TextToken {
+                                text: chars[i].to_string(),
+                            });
                             i += 1;
                         }
                     };
@@ -110,10 +112,12 @@ impl<'a> Tokenizer<'a> {
                             let alt = String::from(mat.get(1).unwrap().as_str());
                             let link = String::from(mat.get(2).unwrap().as_str());
                             i = i + length;
-                            token = InlineToken::ImageToken( ImageToken { link, alt });
-                        },
+                            token = InlineToken::ImageToken(ImageToken { link, alt });
+                        }
                         None => {
-                            token = InlineToken::TextToken(TextToken{ text: chars[i].to_string() } );
+                            token = InlineToken::TextToken(TextToken {
+                                text: chars[i].to_string(),
+                            });
                             i += 1;
                         }
                     }
@@ -149,7 +153,9 @@ impl<'a> Tokenizer<'a> {
                                     i = temp + (mat.end() as usize);
                                 }
                                 None => {
-                                    token = InlineToken::TextToken(TextToken { text: chars[i].to_string()});
+                                    token = InlineToken::TextToken(TextToken {
+                                        text: chars[i].to_string(),
+                                    });
                                     i = i + 1;
                                 }
                             }
@@ -161,7 +167,9 @@ impl<'a> Tokenizer<'a> {
                 while temp < n && !special_tokens.contains_key(&chars[temp]) {
                     temp += 1;
                 }
-                token = InlineToken::TextToken(TextToken{ text: inline_text[i..temp].to_string()});
+                token = InlineToken::TextToken(TextToken {
+                    text: inline_text[i..temp].to_string(),
+                });
                 i = temp;
             }
             tokens.push(token);

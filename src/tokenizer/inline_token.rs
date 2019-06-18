@@ -5,16 +5,16 @@ pub enum InlineToken {
     DoubleSpecialToken(DoubleSpecialToken),
     LinkToken(LinkToken),
     ImageToken(ImageToken),
-    BreakToken
+    BreakToken,
 }
 #[derive(Debug)]
-pub struct  TextToken {
-    pub text: String
+pub struct TextToken {
+    pub text: String,
 }
 #[derive(Debug)]
 pub struct SpecialToken {
     pub token: char,
-    pub inline_tokens: Vec<InlineToken>
+    pub inline_tokens: Vec<InlineToken>,
 }
 #[derive(Debug)]
 pub struct DoubleSpecialToken {
@@ -24,12 +24,12 @@ pub struct DoubleSpecialToken {
 #[derive(Debug)]
 pub struct LinkToken {
     pub link: String,
-    pub alt: String
+    pub alt: String,
 }
 #[derive(Debug)]
 pub struct ImageToken {
     pub link: String,
-    pub alt: String
+    pub alt: String,
 }
 
 #[cfg(test)]
@@ -44,7 +44,7 @@ mod tests {
         let result = tokenizer.scanner();
         let inline_tokens: &Vec<InlineToken>;
         match &result[0] {
-            LineToken::Paragraph(token)  => {
+            LineToken::Paragraph(token) => {
                 inline_tokens = &token.inline_tokens;
             }
             _ => panic!(),
@@ -194,7 +194,7 @@ mod tests {
         let result = tokenizer.inline_scanner("`Test`");
         let token1 = &result[0];
         match token1 {
-            InlineToken::SpecialToken(token)  => {
+            InlineToken::SpecialToken(token) => {
                 assert_eq!(token.token, '`');
                 match &token.inline_tokens[0] {
                     InlineToken::TextToken(text) => {
@@ -207,7 +207,6 @@ mod tests {
         };
     }
 
-
     #[test]
     fn test_link_token() {
         let text = "[Link](http://a.com)";
@@ -219,7 +218,7 @@ mod tests {
             InlineToken::LinkToken(token) => {
                 assert_eq!(token.alt, "Link");
                 assert_eq!(token.link, "http://a.com");
-            },
+            }
             _ => panic!(),
         };
     }
@@ -260,7 +259,7 @@ mod tests {
             InlineToken::ImageToken(token) => {
                 assert_eq!(token.alt, "Link");
                 assert_eq!(token.link, "http://a.com");
-            },
+            }
             _ => panic!(),
         };
     }
@@ -298,7 +297,7 @@ mod tests {
         assert_eq!(result.len(), 5);
         for i in 0..text.len() {
             if let InlineToken::TextToken(token) = &result[i] {
-                assert_eq!(token.text, text.get(i..i+1).unwrap()) ;
+                assert_eq!(token.text, text.get(i..i + 1).unwrap());
             } else {
                 panic!()
             }

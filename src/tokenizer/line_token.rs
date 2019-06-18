@@ -4,7 +4,7 @@ pub enum LineToken {
     HeaderToken(HeaderToken),
     Paragraph(Paragraph),
     CodeBlock(CodeBlock),
-    Quote(Quote)
+    Quote(Quote),
 }
 #[derive(Debug)]
 pub struct HeaderToken {
@@ -17,22 +17,18 @@ pub struct Paragraph {
 }
 #[derive(Debug)]
 pub struct CodeBlock {
-    pub text: String
+    pub text: String,
 }
 
 impl CodeBlock {
-
     pub fn new(text: String) -> Self {
-        Self {
-            text,
-        }
+        Self { text }
     }
 }
 #[derive(Debug)]
 pub struct Quote {
-    pub inline_tokens: Vec<InlineToken>
+    pub inline_tokens: Vec<InlineToken>,
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -68,7 +64,7 @@ mod tests {
         tokenizer.block_parser(&lines, &mut tokens);
         assert_eq!(tokens.len(), 1);
         let token = tokens.first().unwrap();
-        if let LineToken::CodeBlock( token ) = token {
+        if let LineToken::CodeBlock(token) = token {
             assert_eq!(token.text, "this\nis\na\ntest");
         } else {
             panic!();
@@ -76,10 +72,10 @@ mod tests {
     }
 
     #[test]
-    fn test_scanner_with_code_block () {
+    fn test_scanner_with_code_block() {
         let text = "```\n\
-        this is a test \n\
-        ```";
+                    this is a test \n\
+                    ```";
         let tokenizer = Tokenizer::new(text);
         let result = tokenizer.scanner();
         assert_eq!(result.len(), 1);
@@ -92,11 +88,11 @@ mod tests {
     }
 
     #[test]
-    fn test_scanner_with_code_block_and_paragraph () {
+    fn test_scanner_with_code_block_and_paragraph() {
         let text = "```\n\
-        this is a test \n\
-        ```\n\
-        this is another test";
+                    this is a test \n\
+                    ```\n\
+                    this is another test";
         let tokenizer = Tokenizer::new(text);
         let result = tokenizer.scanner();
         assert_eq!(result.len(), 2);
