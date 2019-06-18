@@ -1,20 +1,20 @@
 use super::inline_token::InlineToken;
-
+#[derive(Debug)]
 pub enum LineToken {
     HeaderToken(HeaderToken),
     Paragraph(Paragraph),
-    CodeBlock(CodeBlock)
+    CodeBlock(CodeBlock),
+    Quote(Quote)
 }
-
+#[derive(Debug)]
 pub struct HeaderToken {
     pub level: usize,
     pub inline_tokens: Vec<InlineToken>,
 }
-
+#[derive(Debug)]
 pub struct Paragraph {
     pub inline_tokens: Vec<InlineToken>,
 }
-
 #[derive(Debug)]
 pub struct CodeBlock {
     pub text: String
@@ -27,6 +27,10 @@ impl CodeBlock {
             text,
         }
     }
+}
+#[derive(Debug)]
+pub struct Quote {
+    pub inline_tokens: Vec<InlineToken>
 }
 
 
@@ -109,6 +113,165 @@ mod tests {
             if let InlineToken::TextToken(token) = token.inline_tokens.first().unwrap() {
                 assert_eq!(token.text, "this is another test")
             }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_quote_with_multiple_lines() {
+        let text = ">this is  \na quote";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 1);
+        if let LineToken::Quote(token) = &result[0] {
+            let inline_tokens = &token.inline_tokens;
+            assert_eq!(inline_tokens.len(), 3);
+            if let InlineToken::TextToken(token) = &inline_tokens[0] {
+                assert_eq!(token.text, "this is  ");
+            } else {
+                panic!();
+            }
+            if let InlineToken::BreakToken = &inline_tokens[1] {
+                assert!(true);
+            } else {
+                panic!();
+            }
+            if let InlineToken::TextToken(token) = &inline_tokens[2] {
+                assert_eq!(token.text, "a quote");
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_quote_with_single_line() {
+        let text = ">this is\n";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 1);
+        if let LineToken::Quote(token) = &result[0] {
+            let inline_tokens = &token.inline_tokens;
+            assert_eq!(inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &inline_tokens[0] {
+                assert_eq!(token.text, "this is");
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_quote_with_inline_tokens_with_single_line() {
+        let text = ">this is*a bold*\n";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 1);
+        if let LineToken::Quote(token) = &result[0] {
+            let inline_tokens = &token.inline_tokens;
+            assert_eq!(inline_tokens.len(), 2);
+            if let InlineToken::TextToken(token) = &inline_tokens[0] {
+                assert_eq!(token.text, "this is");
+            } else {
+                panic!();
+            }
+            if let InlineToken::SpecialToken(token) = &inline_tokens[1] {
+                assert_eq!(token.token, '*');
+                assert_eq!(token.inline_tokens.len(), 1);
+                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                    assert_eq!(token.text, "a bold");
+                }
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_single_line_quote_with_lines_surrounding() {
+        let text = "first paragraph\n>a quote\nsecond paragraph";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 3);
+        if let LineToken::Quote(token) = &result[1] {
+            assert_eq!(token.inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "a quote");
+            }
+        }
+
+        if let LineToken::Paragraph(token) = &result[0] {
+            assert_eq!(token.inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "first paragraph");
+            }
+        } else {
+            panic!();
+        }
+        if let LineToken::Paragraph(token) = &result[2] {
+            assert_eq!(token.inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "second paragraph");
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_multiple_lines_quote_with_lines_surrounding() {
+        let text = "first paragraph\n>a quote  \nanother quote\nsecond paragraph";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 3);
+        if let LineToken::Quote(token) = &result[1] {
+            assert_eq!(token.inline_tokens.len(), 3);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "a quote  ");
+            }
+            if let InlineToken::TextToken(token) = &token.inline_tokens[2] {
+                assert_eq!(token.text, "another quote");
+            }
+            if let InlineToken::BreakToken = &token.inline_tokens[1] {
+                assert!(true);
+            } else {
+                panic!();
+            }
+        }
+
+        if let LineToken::Paragraph(token) = &result[0] {
+            assert_eq!(token.inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "first paragraph");
+            }
+        } else {
+            panic!();
+        }
+        if let LineToken::Paragraph(token) = &result[2] {
+            assert_eq!(token.inline_tokens.len(), 1);
+            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                assert_eq!(token.text, "second paragraph");
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_quote_with_empty_quote() {
+        let text = ">";
+        let tokenizer = Tokenizer::new(text);
+        let result = tokenizer.scanner();
+        assert_eq!(result.len(), 1);
+        if let LineToken::Quote(token) = &result[0] {
+            assert_eq!(token.inline_tokens.len(), 0);
         } else {
             panic!();
         }

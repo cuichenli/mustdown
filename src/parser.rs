@@ -1,5 +1,5 @@
 pub use super::tokenizer::inline_token::{InlineToken, SpecialToken, DoubleSpecialToken, TextToken, ImageToken, LinkToken};
-pub use super::tokenizer::line_token::{LineToken, HeaderToken, Paragraph};
+pub use super::tokenizer::line_token::{LineToken, HeaderToken, Paragraph, Quote};
 pub use super::tokenizer::Tokenizer;
 
 pub struct Parser {
@@ -57,6 +57,9 @@ impl Parser {
             },
             InlineToken::LinkToken(token) => {
                 result.push_str(format!("<a href=\"{}\">{}</a>", token.link, token.alt).as_str());
+            },
+            InlineToken::BreakToken => {
+                result.push_str("<br>");
             }
             _ => panic!(),
         };
@@ -87,7 +90,13 @@ impl Parser {
                 result.push_str(&token.text);
                 result.push_str("\n</code></pre>");
             },
-            _ => panic!()
+            LineToken::Quote(token) => {
+                result.push_str("<blockquote><p>");
+                for t in &token.inline_tokens {
+                    result.push_str(&self.inline_parse(t));
+                }
+                result.push_str("</p></blockquote>")
+            }
         }
         result
     }
@@ -253,5 +262,66 @@ mod test {
         let token = InlineToken::LinkToken(link_token);
         let result = parser.inline_parse(&token);
         assert_eq!("<a href=\"link\">alt</a>", result);
+    }
+
+    #[test]
+    fn test_single_line_quote() {
+        let parser = Parser { tokens: Vec::new() };
+        let inline_tokens = vec![
+            InlineToken::TextToken(TextToken { text: String::from("text token") })
+        ];
+        let quote_token = Quote {
+            inline_tokens
+        };
+        let result = parser.line_parse(&LineToken::Quote(quote_token));
+        assert_eq!(result, "<blockquote><p>text token</p></blockquote>");
+    }
+
+    #[test]
+    fn test_multiple_lines_quote() {
+        let parser = Parser { tokens: Vec::new() };
+        let inline_tokens = vec![
+            InlineToken::TextToken(TextToken { text: String::from("text token") }),
+            InlineToken::BreakToken
+        ];
+        let quote_token = Quote {
+            inline_tokens
+        };
+        let result = parser.line_parse(&LineToken::Quote(quote_token));
+        assert_eq!(result, "<blockquote><p>text token<br></p></blockquote>");
+    }
+
+    #[test]
+    fn test_more_lines_quote() {
+        let parser = Parser { tokens: Vec::new() };
+        let inline_tokens = vec![
+            InlineToken::TextToken(TextToken { text: String::from("text token") }),
+            InlineToken::BreakToken,
+            InlineToken::TextToken(TextToken { text: String::from("another token")})
+        ];
+        let quote_token = Quote {
+            inline_tokens
+        };
+        let result = parser.line_parse(&LineToken::Quote(quote_token));
+        assert_eq!(result, "<blockquote><p>text token<br>another token</p></blockquote>");
+    }
+
+    #[test]
+    fn test_more_lines_quote_with_special_token() {
+        let parser = Parser { tokens: Vec::new() };
+        let inline_tokens = vec![
+            InlineToken::TextToken(TextToken { text: String::from("text token") }),
+            InlineToken::BreakToken,
+            InlineToken::TextToken(TextToken { text: String::from("another token")}),
+            InlineToken::SpecialToken(SpecialToken {
+                    token: '*',
+                    inline_tokens: vec![InlineToken::TextToken(TextToken{text: String::from("another test")})],
+            })
+        ];
+        let quote_token = Quote {
+            inline_tokens
+        };
+        let result = parser.line_parse(&LineToken::Quote(quote_token));
+        assert_eq!(result, "<blockquote><p>text token<br>another token<em>another test</em></p></blockquote>");
     }
 }

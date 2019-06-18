@@ -4,7 +4,7 @@ pub mod inline_token;
 pub mod line_token;
 
 pub use inline_token::{InlineToken, DoubleSpecialToken, SpecialToken, TextToken, LinkToken, ImageToken};
-pub use line_token::{LineToken, Paragraph, HeaderToken, CodeBlock};
+pub use line_token::{LineToken, Paragraph, HeaderToken, CodeBlock, Quote};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -59,6 +59,19 @@ impl<'a> Tokenizer<'a> {
         let text = lines.join("\n");
         let block = CodeBlock::new(text);
         tokens.push(LineToken::CodeBlock(block));
+    }
+
+    pub fn quote_parser(&self, lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+        let mut inline_tokens: Vec<InlineToken> = Vec::new();
+        for l in lines {
+            inline_tokens.append(&mut self.inline_scanner(l));
+            inline_tokens.push(InlineToken::BreakToken);
+        }
+        inline_tokens.pop();
+        let token = Quote {
+            inline_tokens
+        };
+        tokens.push(LineToken::Quote(token));
     }
 
     pub fn inline_scanner(&self, inline_text: &str) -> Vec<InlineToken> {
@@ -163,6 +176,10 @@ impl<'a> Tokenizer<'a> {
         let mut i: usize = 0;
         while i < lines.len() {
             let line = lines[i];
+            if line == "" {
+                i += 1;
+                continue;
+            }
             if line == "```" {
                 let mut block: Vec<&str> = Vec::new();
                 i += 1;
@@ -171,6 +188,19 @@ impl<'a> Tokenizer<'a> {
                     i += 1;
                 }
                 self.block_parser(&block, &mut result);
+            } else if line[0..1] == *">" {
+                let mut temp = vec![&lines[i][1..]];
+                i += 1;
+                while i < lines.len() && lines[i].ends_with("  ") {
+                    temp.push(lines[i]);
+                    i += 1;
+                }
+                if i < lines.len() && lines[i - 1].ends_with("  ") {
+                    temp.push(lines[i]);
+                } else {
+                    i -= 1;
+                }
+                self.quote_parser(&temp, &mut result);
             } else {
                 self.line_scanner(&line, &mut result);
             }

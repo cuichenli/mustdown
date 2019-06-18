@@ -1,30 +1,32 @@
+#[derive(Debug)]
 pub enum InlineToken {
     TextToken(TextToken),
     SpecialToken(SpecialToken),
     DoubleSpecialToken(DoubleSpecialToken),
     LinkToken(LinkToken),
-    ImageToken(ImageToken)
+    ImageToken(ImageToken),
+    BreakToken
 }
-
+#[derive(Debug)]
 pub struct  TextToken {
     pub text: String
 }
-
+#[derive(Debug)]
 pub struct SpecialToken {
     pub token: char,
     pub inline_tokens: Vec<InlineToken>
 }
-
+#[derive(Debug)]
 pub struct DoubleSpecialToken {
     pub token: char,
     pub inline_tokens: Vec<InlineToken>,
 }
-
+#[derive(Debug)]
 pub struct LinkToken {
     pub link: String,
     pub alt: String
 }
-
+#[derive(Debug)]
 pub struct ImageToken {
     pub link: String,
     pub alt: String
