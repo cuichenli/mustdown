@@ -65,7 +65,6 @@ impl Parser {
             InlineToken::BreakToken => {
                 result.push_str("<br>");
             }
-            _ => panic!(),
         };
         result
     }
