@@ -107,6 +107,42 @@ impl<'a> Tokenizer<'a> {
         tokens.push(LineToken::Quote(token));
     }
 
+    pub fn try_image_token(text: &str) -> Option<ImageToken> {
+        let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let (alt, link) = Tokenizer::get_alt_and_link(&mat);
+            return Some(ImageToken::new(alt, link));
+        }
+        None
+    }
+
+    pub fn try_link_token(text: &str) -> Option<LinkToken> {
+        let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let (alt, link) = Tokenizer::get_alt_and_link(&mat);
+            return Some(LinkToken::new(alt, link));
+        }
+        None
+    }
+
+    pub fn get_text_token(text: String) -> InlineToken {
+        InlineToken::TextToken(TextToken {
+            text
+        })
+    }
+
+    pub fn get_nth_cap(mat: &regex::Captures, n: usize) -> String {
+        String::from(mat.get(n).unwrap().as_str())
+    }
+
+    pub fn get_alt_and_link(mat: &regex::Captures) -> (String, String) {
+        let alt = Tokenizer::get_nth_cap(&mat, 1);
+        let link = Tokenizer::get_nth_cap(&mat, 2);
+        (alt, link)
+    }
+
     pub fn inline_scanner(&self, inline_text: &str) -> Vec<InlineToken> {
         let mut tokens: Vec<InlineToken> = Vec::new();
         let n = inline_text.len();
@@ -116,84 +152,26 @@ impl<'a> Tokenizer<'a> {
         while i < n {
             let token: InlineToken;
             if special_tokens.contains_key(&chars[i]) {
+                let left_text = &inline_text[i..];
                 if chars[i] == '[' {
-                    let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
-                    let left_text = &inline_text[i..];
-                    let caps = re.captures(left_text);
-                    match caps {
-                        Some(mat) => {
-                            let length = mat.get(0).unwrap().as_str().len();
-                            let alt = String::from(mat.get(1).unwrap().as_str());
-                            let link = String::from(mat.get(2).unwrap().as_str());
-                            i = i + length;
-                            token = InlineToken::LinkToken(LinkToken { link, alt });
-                        }
-                        None => {
-                            token = InlineToken::TextToken(TextToken {
-                                text: chars[i].to_string(),
-                            });
-                            i += 1;
-                        }
-                    };
+                    if let Some(t) = Tokenizer::try_link_token(left_text) {
+                        i = i + t.len();
+                        token = InlineToken::LinkToken(t);
+                    } else {
+                        i += 1;
+                        token = Tokenizer::get_text_token(chars[i].to_string());
+                    }
                 } else if chars[i] == '!' {
-                    let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
-                    let left_text = &inline_text[i..];
-                    let caps = re.captures(left_text);
-                    match caps {
-                        Some(mat) => {
-                            let length = mat.get(0).unwrap().as_str().len();
-                            let alt = String::from(mat.get(1).unwrap().as_str());
-                            let link = String::from(mat.get(2).unwrap().as_str());
-                            i = i + length;
-                            token = InlineToken::ImageToken(ImageToken { link, alt });
-                        }
-                        None => {
-                            token = InlineToken::TextToken(TextToken {
-                                text: chars[i].to_string(),
-                            });
-                            i += 1;
-                        }
+                    if let Some(t) = Tokenizer::try_image_token(left_text) {
+                        i = i + t.len();
+                        token = InlineToken::ImageToken(t);
+                    } else {
+                        i += 1;
+                        token = Tokenizer::get_text_token(chars[i].to_string());
                     }
                 } else {
-                    let c = special_tokens.get(&chars[i]).unwrap();
-                    let re = Regex::new(&format!(r"[^\\]?({}{}).*?({}{})", c, c, c, c)).unwrap();
-                    let mut temp = i;
-                    if i != 0 {
-                        temp = i - 1;
-                    }
-                    let caps = re.find(&inline_text[temp..]);
-                    match caps {
-                        Some(mat) => {
-                            let start = if temp < i { 3 } else { 2 };
-                            let s = &mat.as_str()[start..mat.end() - 1];
-                            token = InlineToken::DoubleSpecialToken(DoubleSpecialToken {
-                                token: chars[i],
-                                inline_tokens: self.inline_scanner(s),
-                            });
-                            i = temp + (mat.end() as usize);
-                        }
-                        None => {
-                            let re = Regex::new(&format!(r"[^\\]?({}).*?({})", c, c)).unwrap();
-                            let caps = re.find(&inline_text[temp..]);
-                            match caps {
-                                Some(mat) => {
-                                    let start = if temp < i { 2 } else { 1 };
-                                    let s = &mat.as_str()[start..mat.end() - 1];
-                                    token = InlineToken::SpecialToken(SpecialToken {
-                                        token: chars[i],
-                                        inline_tokens: self.inline_scanner(s),
-                                    });
-                                    i = temp + (mat.end() as usize);
-                                }
-                                None => {
-                                    token = InlineToken::TextToken(TextToken {
-                                        text: chars[i].to_string(),
-                                    });
-                                    i = i + 1;
-                                }
-                            }
-                        }
-                    }
+                    token = InlineToken::SpecialToken(SpecialToken::new(chars[i]));
+                    i += 1;
                 }
             } else {
                 let mut temp = i;

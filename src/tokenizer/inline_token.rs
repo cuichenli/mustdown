@@ -16,6 +16,15 @@ pub struct SpecialToken {
     pub token: char,
     pub inline_tokens: Vec<InlineToken>,
 }
+
+impl SpecialToken {
+    pub fn new(token: char) -> Self {
+        Self {
+            token,
+            inline_tokens: vec![]
+        }
+    }
+}
 #[derive(Debug)]
 pub struct DoubleSpecialToken {
     pub token: char,
@@ -23,13 +32,39 @@ pub struct DoubleSpecialToken {
 }
 #[derive(Debug)]
 pub struct LinkToken {
-    pub link: String,
     pub alt: String,
+    pub link: String,
+
 }
+
+impl LinkToken {
+    pub fn new(alt: String, link: String ) -> Self {
+        Self {
+            alt, link
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.alt.len() + self.link.len() + 4
+    }
+}
+
 #[derive(Debug)]
 pub struct ImageToken {
-    pub link: String,
     pub alt: String,
+    pub link: String,
+}
+
+impl ImageToken {
+    pub fn new(alt: String, link: String ) -> Self {
+        Self {
+            alt, link
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.alt.len() + self.link.len() + 5
+    }
 }
 
 #[cfg(test)]
