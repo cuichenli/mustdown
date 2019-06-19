@@ -73,111 +73,56 @@ mod tests {
     use super::*;
     use crate::Tokenizer;
 
+    pub fn assert_special_token(token: &InlineToken, symbol: char) {
+        if let InlineToken::SpecialToken(token) = token {
+            assert_eq!(token.token, symbol);
         } else {
+            panic!()
+        }
+    }
+
+    pub fn assert_special_token_group(tokens: &[InlineToken], text: &str, symbol: char) {
+        assert_eq!(tokens.len(), 3);
+        assert_special_token(&tokens[0], symbol);
+        if let InlineToken::TextToken(token) = &tokens[1] {
+            assert_eq!(token.text, text);
+        } else {
+            panic!();
+        }
+        assert_special_token(&tokens[2], symbol)
+    }
+
+    pub fn assert_text_token(token: &InlineToken, text: &str) {
+        if let InlineToken::TextToken(token) = token {
+            assert_eq!(token.text, text);
+        } else {
+            panic!();
+        }
+    }
+
     #[test]
     fn test_special_token() {
-        let tokenizer = Tokenizer::new("*Test*");
-        let result = tokenizer.scanner();
-        let inline_tokens: &Vec<InlineToken>;
-        match &result[0] {
-            LineToken::Paragraph(token) => {
-                inline_tokens = &token.inline_tokens;
-            }
-            _ => panic!(),
-        };
-        assert_eq!(inline_tokens.len(), 1);
-        let result = &inline_tokens[0];
-        let inline_tokens: &Vec<InlineToken>;
-        match result {
-            InlineToken::SpecialToken(token) => {
-                assert_eq!(token.token, '*');
-                assert_eq!(token.inline_tokens.len(), 1);
-                inline_tokens = &token.inline_tokens;
-            }
-            _ => panic!(),
-        };
-        match &inline_tokens[0] {
-            InlineToken::TextToken(text) => {
-                assert_eq!(text.text, "Test");
-            }
-            _ => panic!(),
-        };
+        let tokenizer = Tokenizer::new("");
+        let result = &tokenizer.inline_scanner("*Test*");
+        assert_special_token_group(result, "Test", '*');
     }
 
     #[test]
     fn test_special_token_start_with_space() {
-        let tokenizer = Tokenizer::new(" *Test*");
-        let result = tokenizer.scanner();
-        let inline_tokens: &Vec<InlineToken>;
-        match &result[0] {
-            LineToken::Paragraph(token) => {
-                inline_tokens = &token.inline_tokens;
-            }
-            _ => panic!(),
-        };
-        assert_eq!(inline_tokens.len(), 2);
-        let result = &inline_tokens[1];
-        let text_token = &inline_tokens[0];
-        match text_token {
-            InlineToken::TextToken(text) => {
-                assert_eq!(text.text, " ");
-            }
-            _ => panic!(),
-        };
-        let inline_tokens: &Vec<InlineToken>;
-        match result {
-            InlineToken::SpecialToken(token) => {
-                assert_eq!(token.token, '*');
-                assert_eq!(token.inline_tokens.len(), 1);
-                inline_tokens = &token.inline_tokens;
-            }
-            _ => panic!(),
-        };
-        match &inline_tokens[0] {
-            InlineToken::TextToken(text) => {
-                assert_eq!(text.text, "Test");
-            }
-            _ => panic!(),
-        };
+        let tokenizer = Tokenizer::new("");
+        let result = &tokenizer.inline_scanner(" *Test*");
+        assert_text_token(&result[0], " ");
+        assert_special_token_group(&result[1..], "Test", '*');
     }
 
     #[test]
     fn test_special_token_with_start_space_and_end_words() {
-        let tokenizer = Tokenizer::new(" *Test* another test");
-        let result = tokenizer.scanner();
-        assert_eq!(result.len(), 1);
-        let inline_token = &result[0];
-        let tokens: &Vec<InlineToken>;
-        match inline_token {
-            LineToken::Paragraph(token) => {
-                tokens = &token.inline_tokens;
-            }
-            _ => panic!(),
-        };
-        assert_eq!(tokens.len(), 3);
-        match &tokens[0] {
-            InlineToken::TextToken(text) => {
-                assert_eq!(text.text, " ");
-            }
-            _ => panic!(),
-        };
-        match &tokens[1] {
-            InlineToken::SpecialToken(token) => {
-                assert_eq!(token.token, '*');
-                assert_eq!(token.inline_tokens.len(), 1);
-                match &token.inline_tokens[0] {
-                    InlineToken::TextToken(text) => {
-                        assert_eq!(text.text, "Test");
-                    }
-                    _ => panic!(),
-                };
-            }
-            _ => panic!(),
-        };
-        match &tokens[2] {
-            InlineToken::TextToken(text) => assert_eq!(text.text, " another test"),
-            _ => panic!(),
-        };
+        let tokenizer = Tokenizer::new("");
+        let result = tokenizer.inline_scanner(" *Test* another test");
+        assert_eq!(result.len(), 5);
+        assert_text_token(&result[0], " ");
+        assert_special_token_group(&result[1..4], "Test", '*');
+        assert_text_token(&result[4], " another test");
     }
 
     #[test]
@@ -229,18 +174,7 @@ mod tests {
         let tokenizer = Tokenizer::new("");
         let result = tokenizer.inline_scanner("`Test`");
         let token1 = &result[0];
-        match token1 {
-            InlineToken::SpecialToken(token) => {
-                assert_eq!(token.token, '`');
-                match &token.inline_tokens[0] {
-                    InlineToken::TextToken(text) => {
-                        assert_eq!(text.text, "Test");
-                    }
-                    _ => panic!(),
-                }
-            }
-            _ => panic!(),
-        };
+        assert_special_token(token1, '`');
     }
 
     #[test]
@@ -331,6 +265,7 @@ mod tests {
         let tokenizer = Tokenizer::new("");
         let result = tokenizer.inline_scanner(text);
         assert_eq!(result.len(), 5);
+        println!("{:?}", result);
         for i in 0..text.len() {
             if let InlineToken::TextToken(token) = &result[i] {
                 assert_eq!(token.text, text.get(i..i + 1).unwrap());
