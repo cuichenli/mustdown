@@ -73,6 +73,7 @@ mod tests {
     use super::*;
     use crate::Tokenizer;
 
+        } else {
     #[test]
     fn test_special_token() {
         let tokenizer = Tokenizer::new("*Test*");
