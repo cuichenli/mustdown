@@ -158,16 +158,16 @@ impl<'a> Tokenizer<'a> {
                         i = i + t.len();
                         token = InlineToken::LinkToken(t);
                     } else {
-                        i += 1;
                         token = Tokenizer::get_text_token(chars[i].to_string());
+                        i += 1;
                     }
                 } else if chars[i] == '!' {
                     if let Some(t) = Tokenizer::try_image_token(left_text) {
                         i = i + t.len();
                         token = InlineToken::ImageToken(t);
                     } else {
-                        i += 1;
                         token = Tokenizer::get_text_token(chars[i].to_string());
+                        i += 1;
                     }
                 } else {
                     token = InlineToken::SpecialToken(SpecialToken::new(chars[i]));
