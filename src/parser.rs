@@ -1,7 +1,7 @@
 pub use super::tokenizer::inline_token::{
-    DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken,
+    DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken
 };
-pub use super::tokenizer::line_token::{HeaderToken, LineToken, Paragraph, Quote};
+pub use super::tokenizer::line_token::{HeaderToken, LineToken, Paragraph, Quote, OrderedList, OrderedListBlock, UnorderedList, UnorderedListBlock};
 pub use super::tokenizer::Tokenizer;
 
 pub struct Parser {
@@ -99,6 +99,34 @@ impl Parser {
                     result.push_str(&self.inline_parse(t));
                 }
                 result.push_str("</p></blockquote>")
+            }
+            LineToken::UnorderedListBlock(token) => {
+                result.push_str("<ul>");
+                for t in &token.unordered_lists {
+                    result.push_str(&self.line_parse(t));
+                }
+                result.push_str("</ul>")
+            }
+            LineToken::OrderedListBlock(token) => {
+                result.push_str("<ol>");
+                for t in &token.ordered_lists {
+                    result.push_str(&self.line_parse(t));
+                }
+                result.push_str("</ol>")
+            }
+            LineToken::OrderedList(token) => {
+                result.push_str("<li>");
+                for t in &token.inline_tokens {
+                    result.push_str(&self.inline_parse(t));
+                }
+                result.push_str("</li>")
+            }
+            LineToken::UnorderedList(token) => {
+                result.push_str("<li>");
+                for t in &token.inline_tokens {
+                    result.push_str(&self.inline_parse(t));
+                }
+                result.push_str("</li>")
             }
         }
         result
@@ -360,5 +388,57 @@ mod test {
             result,
             "<blockquote><p>text token<br>another token<em>another test</em></p></blockquote>"
         );
+    }
+
+    #[test]
+    fn test_ordered_list() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = OrderedListBlock {
+            ordered_lists: vec![
+                LineToken::OrderedList( OrderedList {
+                    order: 1,
+                    inline_tokens: vec![
+                        InlineToken::TextToken( TextToken{
+                            text: String::from("first")
+                        })
+                    ]
+                }),
+                LineToken::OrderedList( OrderedList {
+                    order: 1,
+                    inline_tokens: vec![
+                        InlineToken::TextToken( TextToken{
+                            text: String::from("second")
+                        })
+                    ]
+                })
+            ]
+        };
+        let result = parser.line_parse(&LineToken::OrderedListBlock(token));
+        assert_eq!(result, "<ol><li>first</li><li>second</li></ol>");
+    }
+
+    #[test]
+    fn test_unordered_list() {
+        let parser = Parser { tokens: Vec::new() };
+        let token = UnorderedListBlock {
+            unordered_lists: vec![
+                LineToken::UnorderedList( UnorderedList {
+                    inline_tokens: vec![
+                        InlineToken::TextToken( TextToken{
+                            text: String::from("first")
+                        })
+                    ]
+                }),
+                LineToken::UnorderedList( UnorderedList {
+                    inline_tokens: vec![
+                        InlineToken::TextToken( TextToken{
+                            text: String::from("second")
+                        })
+                    ]
+                })
+            ]
+        };
+        let result = parser.line_parse(&LineToken::UnorderedListBlock(token));
+        assert_eq!(result, "<ul><li>first</li><li>second</li></ul>");
     }
 }
