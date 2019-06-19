@@ -8,7 +8,7 @@ pub enum LineToken {
     OrderedListBlock(OrderedListBlock),
     UnorderedListBlock(UnorderedListBlock),
     OrderedList(OrderedList),
-    UnorderedList(UnorderedList)
+    UnorderedList(UnorderedList),
 }
 
 #[derive(Debug)]
@@ -37,25 +37,24 @@ pub struct Quote {
 
 #[derive(Debug)]
 pub struct OrderedListBlock {
-    pub ordered_lists: Vec<LineToken>
+    pub ordered_lists: Vec<LineToken>,
 }
 
 #[derive(Debug)]
 pub struct UnorderedListBlock {
-    pub unordered_lists: Vec<LineToken>
+    pub unordered_lists: Vec<LineToken>,
 }
 
 #[derive(Debug)]
-pub struct OrderedList{
+pub struct OrderedList {
     pub order: usize,
-    pub inline_tokens: Vec<InlineToken>
+    pub inline_tokens: Vec<InlineToken>,
 }
 
 #[derive(Debug)]
-pub struct UnorderedList{
-    pub inline_tokens: Vec<InlineToken>
+pub struct UnorderedList {
+    pub inline_tokens: Vec<InlineToken>,
 }
-
 
 #[cfg(test)]
 mod tests {

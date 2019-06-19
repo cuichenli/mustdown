@@ -6,14 +6,16 @@ pub mod line_token;
 pub use inline_token::{
     DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken,
 };
-pub use line_token::{CodeBlock, HeaderToken, LineToken, Paragraph, Quote, UnorderedListBlock, UnorderedList, OrderedList, OrderedListBlock,};
+pub use line_token::{
+    CodeBlock, HeaderToken, LineToken, OrderedList, OrderedListBlock, Paragraph, Quote,
+    UnorderedList, UnorderedListBlock,
+};
 use regex::Regex;
 use std::collections::HashMap;
 
-
-const ORDERED_LIST :u8 = 1;
-const UNORDERED_LIST :u8 = 2;
-const NOT_LIST :u8 = 0;
+const ORDERED_LIST: u8 = 1;
+const UNORDERED_LIST: u8 = 2;
+const NOT_LIST: u8 = 0;
 
 pub struct Tokenizer<'a> {
     text: &'a str,
@@ -33,13 +35,13 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn is_list(line : &str) -> Option<regex::Captures> {
+    pub fn is_list(line: &str) -> Option<regex::Captures> {
         let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
         let caps = re.captures(line);
         caps
     }
 
-    pub fn is_prev_list(tokens: & Vec<LineToken>) -> u8 {
+    pub fn is_prev_list(tokens: &Vec<LineToken>) -> u8 {
         let last = &tokens.last();
         if let Some(LineToken::UnorderedListBlock(_)) = last {
             return UNORDERED_LIST;
@@ -243,10 +245,12 @@ impl<'a> Tokenizer<'a> {
             } else if let Some(ref v) = Tokenizer::is_list(line) {
                 let left = v.get(v.len() - 1).unwrap().as_str();
                 let token: LineToken;
-                if let Some(_) = v.name("ordered")  {
-                    token = LineToken::OrderedList( OrderedList {
-                        order: line.split(".").collect::<Vec<&str>>()[0].parse::<usize>().unwrap(),
-                        inline_tokens: self.inline_scanner(left)
+                if let Some(_) = v.name("ordered") {
+                    token = LineToken::OrderedList(OrderedList {
+                        order: line.split(".").collect::<Vec<&str>>()[0]
+                            .parse::<usize>()
+                            .unwrap(),
+                        inline_tokens: self.inline_scanner(left),
                     });
                     if Tokenizer::same_list_block_as_prev(&token, &result) {
                         let last = result.last_mut().unwrap();
@@ -254,13 +258,13 @@ impl<'a> Tokenizer<'a> {
                             t.ordered_lists.push(token);
                         }
                     } else {
-                        result.push(LineToken::OrderedListBlock( OrderedListBlock {
-                            ordered_lists: vec![token]
+                        result.push(LineToken::OrderedListBlock(OrderedListBlock {
+                            ordered_lists: vec![token],
                         }));
                     }
                 } else {
-                    token = LineToken::UnorderedList( UnorderedList {
-                        inline_tokens: self.inline_scanner(left)
+                    token = LineToken::UnorderedList(UnorderedList {
+                        inline_tokens: self.inline_scanner(left),
                     });
                     if Tokenizer::same_list_block_as_prev(&token, &result) {
                         let last = result.last_mut().unwrap();
@@ -268,8 +272,8 @@ impl<'a> Tokenizer<'a> {
                             t.unordered_lists.push(token);
                         }
                     } else {
-                        result.push(LineToken::UnorderedListBlock( UnorderedListBlock {
-                            unordered_lists: vec![token]
+                        result.push(LineToken::UnorderedListBlock(UnorderedListBlock {
+                            unordered_lists: vec![token],
                         }));
                     }
                 }
@@ -336,15 +340,15 @@ mod tests {
     #[test]
     fn test_is_prev_list() {
         let tokens = vec![LineToken::OrderedListBlock(OrderedListBlock {
-            ordered_lists: vec![]
+            ordered_lists: vec![],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), ORDERED_LIST);
         let tokens = vec![LineToken::UnorderedListBlock(UnorderedListBlock {
-            unordered_lists: vec![]
+            unordered_lists: vec![],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), UNORDERED_LIST);
         let tokens = vec![LineToken::Paragraph(Paragraph {
-            inline_tokens: vec![]
+            inline_tokens: vec![],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), NOT_LIST);
         let tokens = vec![];

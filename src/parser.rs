@@ -1,7 +1,10 @@
 pub use super::tokenizer::inline_token::{
-    DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken
+    DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken,
 };
-pub use super::tokenizer::line_token::{HeaderToken, LineToken, Paragraph, Quote, OrderedList, OrderedListBlock, UnorderedList, UnorderedListBlock};
+pub use super::tokenizer::line_token::{
+    HeaderToken, LineToken, OrderedList, OrderedListBlock, Paragraph, Quote, UnorderedList,
+    UnorderedListBlock,
+};
 pub use super::tokenizer::Tokenizer;
 
 pub struct Parser {
@@ -395,23 +398,19 @@ mod test {
         let parser = Parser { tokens: Vec::new() };
         let token = OrderedListBlock {
             ordered_lists: vec![
-                LineToken::OrderedList( OrderedList {
+                LineToken::OrderedList(OrderedList {
                     order: 1,
-                    inline_tokens: vec![
-                        InlineToken::TextToken( TextToken{
-                            text: String::from("first")
-                        })
-                    ]
+                    inline_tokens: vec![InlineToken::TextToken(TextToken {
+                        text: String::from("first"),
+                    })],
                 }),
-                LineToken::OrderedList( OrderedList {
+                LineToken::OrderedList(OrderedList {
                     order: 1,
-                    inline_tokens: vec![
-                        InlineToken::TextToken( TextToken{
-                            text: String::from("second")
-                        })
-                    ]
-                })
-            ]
+                    inline_tokens: vec![InlineToken::TextToken(TextToken {
+                        text: String::from("second"),
+                    })],
+                }),
+            ],
         };
         let result = parser.line_parse(&LineToken::OrderedListBlock(token));
         assert_eq!(result, "<ol><li>first</li><li>second</li></ol>");
@@ -422,21 +421,17 @@ mod test {
         let parser = Parser { tokens: Vec::new() };
         let token = UnorderedListBlock {
             unordered_lists: vec![
-                LineToken::UnorderedList( UnorderedList {
-                    inline_tokens: vec![
-                        InlineToken::TextToken( TextToken{
-                            text: String::from("first")
-                        })
-                    ]
+                LineToken::UnorderedList(UnorderedList {
+                    inline_tokens: vec![InlineToken::TextToken(TextToken {
+                        text: String::from("first"),
+                    })],
                 }),
-                LineToken::UnorderedList( UnorderedList {
-                    inline_tokens: vec![
-                        InlineToken::TextToken( TextToken{
-                            text: String::from("second")
-                        })
-                    ]
-                })
-            ]
+                LineToken::UnorderedList(UnorderedList {
+                    inline_tokens: vec![InlineToken::TextToken(TextToken {
+                        text: String::from("second"),
+                    })],
+                }),
+            ],
         };
         let result = parser.line_parse(&LineToken::UnorderedListBlock(token));
         assert_eq!(result, "<ul><li>first</li><li>second</li></ul>");
