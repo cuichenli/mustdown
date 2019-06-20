@@ -68,8 +68,7 @@ impl ImageToken {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::line_token::LineToken;
+pub mod tests {
     use super::*;
     use crate::Tokenizer;
 
@@ -129,44 +128,23 @@ mod tests {
     fn test_double_special_token() {
         let tokenizer = Tokenizer::new("");
         let result = tokenizer.inline_scanner("**Test**");
-        let token1 = &result[0];
-        match token1 {
-            InlineToken::DoubleSpecialToken(token) => {
-                assert_eq!(token.token, '*');
-                match &token.inline_tokens[0] {
-                    InlineToken::TextToken(text) => {
-                        assert_eq!(text.text, "Test");
-                    }
-                    _ => panic!(),
-                }
-            }
-            _ => panic!(),
-        };
+        assert_special_token(&result[0], '*');
+        assert_special_token(&result[1], '*');
+        assert_text_token(&result[2], "Test");
+        assert_special_token(&result[3], '*');
+        assert_special_token(&result[4], '*');
     }
 
     #[test]
     fn test_double_special_token_with_start_space() {
         let tokenizer = Tokenizer::new("");
         let result = tokenizer.inline_scanner(" **Test**");
-        assert_eq!(result.len(), 2);
-        let token1 = &result[0];
-        match token1 {
-            InlineToken::TextToken(text) => assert_eq!(text.text, " "),
-            _ => panic!(),
-        };
-        let token2 = &result[1];
-        match token2 {
-            InlineToken::DoubleSpecialToken(token) => {
-                assert_eq!(token.token, '*');
-                match &token.inline_tokens[0] {
-                    InlineToken::TextToken(text) => {
-                        assert_eq!(text.text, "Test");
-                    }
-                    _ => panic!(),
-                }
-            }
-            _ => panic!(),
-        };
+        assert_text_token(&result[0], " ");
+        assert_special_token(&result[1], '*');
+        assert_special_token(&result[2], '*');
+        assert_text_token(&result[3], "Test");
+        assert_special_token(&result[4], '*');
+        assert_special_token(&result[5], '*');
     }
 
     #[test]
@@ -265,14 +243,12 @@ mod tests {
         let tokenizer = Tokenizer::new("");
         let result = tokenizer.inline_scanner(text);
         assert_eq!(result.len(), 5);
-        println!("{:?}", result);
-        for i in 0..text.len() {
-            if let InlineToken::TextToken(token) = &result[i] {
-                assert_eq!(token.text, text.get(i..i + 1).unwrap());
-            } else {
-                panic!()
-            }
-        }
+        assert_text_token(&result[0], "!");
+        assert_text_token(&result[1], "[");
+        assert_special_token(&result[2], '*');
+        assert_special_token(&result[3], '_');
+        assert_special_token(&result[4], '`');
+
     }
 
 }

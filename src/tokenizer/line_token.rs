@@ -57,9 +57,10 @@ pub struct UnorderedList {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::Tokenizer;
+    use super::super::inline_token::tests::{ assert_text_token, assert_special_token, assert_special_token_group };
 
     #[test]
     fn test_line_scanner_header_token() {
@@ -196,21 +197,9 @@ mod tests {
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
-            assert_eq!(inline_tokens.len(), 2);
-            if let InlineToken::TextToken(token) = &inline_tokens[0] {
-                assert_eq!(token.text, "this is");
-            } else {
-                panic!();
-            }
-            if let InlineToken::SpecialToken(token) = &inline_tokens[1] {
-                assert_eq!(token.token, '*');
-                assert_eq!(token.inline_tokens.len(), 1);
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "a bold");
-                }
-            } else {
-                panic!();
-            }
+            assert_eq!(inline_tokens.len(), 4);
+            assert_text_token(&inline_tokens[0], "this is");
+            assert_special_token_group(&inline_tokens[1..4], "a bold", '*');
         } else {
             panic!();
         }
