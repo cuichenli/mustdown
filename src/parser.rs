@@ -18,6 +18,82 @@ impl Parser {
         Self { tokens }
     }
 
+    pub fn __inline_parse<'a>(tokens: &'a Vec<InlineToken>, token_records: &mut Vec<&'a SpecialToken>, text_record: &mut Vec<String>, temp_text: &mut Vec<String>, index: usize) {
+        if index >= tokens.len() {
+            return
+        }
+        let mut index = index;
+        match &tokens[index] {
+            InlineToken::TextToken(_) => {
+                let mut result = String::new();
+                while let InlineToken::TextToken(token) = &tokens[index]  {
+                    result.push_str(&token.text);
+                    index += 1;
+                    if index >= tokens.len() {
+                        break;
+                    }
+                }
+                index -= 1;
+                if token_records.len() > 0 {
+                    temp_text.push(result);
+                } else {
+                    text_record.push(result);
+                }
+            }
+            InlineToken::SpecialToken(token) => {
+                if token_records.len() == 0 || temp_text.len() == 0 {
+                    token_records.push(&token);
+                } else {
+                    let last = token_records.last().unwrap();
+                    if last.token == token.token {
+                        let mut symbol = "em";
+                        token_records.pop();
+                        if token_records.len() > 0 {
+                            let last = token_records.last().unwrap();
+                            if index + 1 < tokens.len() {
+                                if let InlineToken::SpecialToken(token) = &tokens[index + 1] {
+                                    if token.token == last.token {
+                                        symbol = "strong";
+                                        index += 1;
+                                        token_records.pop();
+                                    }
+                                }
+                            }
+                        }
+
+                        let record_string = temp_text.pop().unwrap();
+                        let result = format!("<{}>{}</{}>", symbol, record_string, symbol);
+                        text_record.push(result);
+                    } else {
+                        token_records.push(&token);
+                    }
+                }
+            }
+            InlineToken::ImageToken(token) => {
+                text_record.push(
+                    format!("<img src=\"{}\" alt=\"{}\">", token.link, token.alt),
+                );
+            }
+            InlineToken::LinkToken(token) => {
+                text_record.push(format!("<a href=\"{}\">{}</a>", token.link, token.alt));
+            }
+            InlineToken::BreakToken => {
+                text_record.push(String::from("<br>"));
+            }
+            _ => ()
+        }
+        Parser::__inline_parse(tokens, token_records, text_record, temp_text, index + 1);
+    }
+
+    pub fn _inline_parse(tokens: &Vec<InlineToken>) -> String {
+        let mut token_records: Vec<&SpecialToken> = Vec::new();
+        let mut text_record: Vec<String> = Vec::new();
+        let mut temp_text: Vec<String> = Vec::new();
+        Parser::__inline_parse(tokens, &mut token_records, &mut text_record, &mut temp_text, 0);
+        println!("{:?}", text_record);
+        text_record.join("")
+    }
+
     pub fn inline_parse(&self, token: &InlineToken) -> String {
         let mut result = String::new();
         match token {
@@ -150,30 +226,48 @@ mod test {
     pub use super::*;
     use crate::tokenizer::CodeBlock;
 
+    pub fn special_token_factory(token: char) -> InlineToken {
+        let t = SpecialToken::new(token);
+        InlineToken::SpecialToken(t)
+    }
+
+    pub fn text_token_factory(text: String) -> InlineToken {
+        let t = TextToken {
+            text
+        };
+        InlineToken::TextToken(t)
+    }
+
+    pub fn special_token_group_factory(token: char, text: String) -> Vec<InlineToken> {
+        vec![special_token_factory('*'), text_token_factory(text), special_token_factory('*')]
+    }
+
     #[test]
     fn test_inline_parser() {
-        let parser = Parser { tokens: Vec::new() };
+        // let parser = Parser { tokens: Vec::new() };
         let t = TextToken {
             text: String::from("this is a test"),
         };
         let token = InlineToken::TextToken(t);
-        let result = parser.inline_parse(&token);
+        let result = Parser::_inline_parse(&vec![token]);
         assert_eq!("this is a test", result);
     }
 
     #[test]
     fn test_italic_inline_parser() {
-        let parser = Parser { tokens: Vec::new() };
-        let text_token = TextToken {
-            text: String::from("this is a test"),
-        };
-        let inline_tokens = vec![InlineToken::TextToken(text_token)];
-        let special_token = SpecialToken {
-            token: '*',
-            inline_tokens: inline_tokens,
-        };
-        let token = InlineToken::SpecialToken(special_token);
-        let result = parser.inline_parse(&token);
+        // let parser = Parser { tokens: Vec::new() };
+        // let text_token = TextToken {
+        //     text: String::from("this is a test"),
+        // };
+        // let inline_tokens = vec![InlineToken::TextToken(text_token), InlineToken::SpecialToken];
+        // let special_token = SpecialToken {
+        //     token: '*',
+        //     inline_tokens: inline_tokens,
+        // };
+        // let token = InlineToken::SpecialToken(special_token);
+        // let result = parser.inline_parse(&token);
+        let tokens = special_token_group_factory('*', String::from("this is a test"));
+        let result = Parser::_inline_parse(&tokens);
         assert_eq!("<em>this is a test</em>", result);
     }
 
