@@ -7,6 +7,7 @@ pub enum InlineToken {
     ImageToken(ImageToken),
     BreakToken,
 }
+
 #[derive(Debug)]
 pub struct TextToken {
     pub text: String,
@@ -18,10 +19,10 @@ pub struct SpecialToken {
 }
 
 impl SpecialToken {
-    pub fn new(token: char) -> Self {
+    pub fn new(token: char, inline_tokens: Vec<InlineToken>) -> Self {
         Self {
             token,
-            inline_tokens: vec![]
+            inline_tokens
         }
     }
 }
@@ -29,6 +30,15 @@ impl SpecialToken {
 pub struct DoubleSpecialToken {
     pub token: char,
     pub inline_tokens: Vec<InlineToken>,
+}
+
+impl DoubleSpecialToken {
+    pub fn new(token: char, inline_tokens: Vec<InlineToken>) -> Self {
+        Self {
+            token,
+            inline_tokens
+        }
+    }
 }
 #[derive(Debug)]
 pub struct LinkToken {
