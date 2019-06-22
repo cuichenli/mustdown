@@ -13,8 +13,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(text: &str) -> Self {
-        let tokenizer = Tokenizer::new(&text);
-        let tokens = tokenizer.scanner();
+        let tokens = Tokenizer::scanner(text);
         Self { tokens }
     }
 
