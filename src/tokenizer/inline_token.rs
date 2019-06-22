@@ -142,9 +142,8 @@ pub mod tests {
         let text = r"\*Test*";
         let result = Tokenizer::inline_scanner(text);
         assert_text_token(&result[0], r"\");
-        assert_text_token(&result[1], "*");
-        assert_text_token(&result[2], "Test");
-        assert_text_token(&result[3], "*");
+        assert_text_token(&result[1], "*Test");
+        assert_text_token(&result[2], "*");
     }
 
     #[test]
@@ -180,6 +179,50 @@ pub mod tests {
             panic!();
         }
     }
+
+    #[test]
+    fn test_escape_more_double_asterisk1() {
+        let text = r"\**Test**";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], r"\");
+        assert_text_token(&result[1], r"*");
+        assert_special_token_group(&result[2], "Test", '*');
+        assert_text_token(&result[3], r"*");
+    }
+
+    #[test]
+    fn test_escape_more_double_asterisk2() {
+        let text = r"**Test\**";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], r"*");
+        if let InlineToken::SpecialToken(t) = &result[1] {
+            assert_eq!(t.inline_tokens.len(), 2 as usize);
+            assert_text_token(&t.inline_tokens[0], r"Test\");
+            assert_text_token(&t.inline_tokens[1], "*");
+        } else {
+            println!("{:?}", &result[1]);
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_asterisk_and_underscore() {
+        let text = r"*_Test*_";
+        let result = Tokenizer::inline_scanner(text);
+        if let InlineToken::SpecialToken(t) = &result[0] {
+            assert_eq!(t.inline_tokens.len(), 2 as usize);
+            assert_text_token(&t.inline_tokens[0], r"_");
+            assert_text_token(&t.inline_tokens[1], "Test");
+        } else {
+            println!("{:?}", &result[1]);
+            panic!();
+        }
+        assert_text_token(&result[1], r"_");
+    }
+
+
+    #[test]
+    fn test_special_token() {
         let result = Tokenizer::inline_scanner("*Test*");
         assert_special_token_group(&result[0], "Test", '*');
     }

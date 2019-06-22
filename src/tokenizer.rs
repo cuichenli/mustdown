@@ -17,14 +17,12 @@ const ORDERED_LIST: u8 = 1;
 const UNORDERED_LIST: u8 = 2;
 const NOT_LIST: u8 = 0;
 
-pub struct Tokenizer<'a> {
-    text: &'a str,
-    special_tokens: HashMap<char, &'a str>,
+pub struct Tokenizer {
 }
 
 const SPECIAL_TOKEN: &'static [char] = &['_', '*', '`', '[', '!' ];
 
-impl<'a> Tokenizer<'a> {
+impl Tokenizer{
 
     pub fn is_list(line: &str) -> Option<regex::Captures> {
         let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
@@ -99,7 +97,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn try_image_token(text: &str) -> Option<ImageToken> {
-        let re = Regex::new(r"[^\\]?!\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = Tokenizer::get_alt_and_link(&mat);
@@ -109,7 +107,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn try_link_token(text: &str) -> Option<LinkToken> {
-        let re = Regex::new(r"[^\\]?\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = Tokenizer::get_alt_and_link(&mat);
@@ -128,18 +126,17 @@ impl<'a> Tokenizer<'a> {
         } else {
             c = borrow;
         }
-        let re = Regex::new(&format!(r"((^[^\\]{}{{2}})|(^{}{{2}}))(.+?[^\\]{}{{2}})", c, c, c)).unwrap();
+        let re = Regex::new(&format!(r"^{}{{2}}(.+?[^\\]{}{{2}})", c, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
-            println!("{:?}", mat);
-            let inner_text = mat.get(4).unwrap().as_str();
+            let inner_text = mat.get(1).unwrap().as_str();
             let token = DoubleSpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 2]));
             return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 2);
         }
-        let re = Regex::new(&format!(r"((^[^\\]{})|(^{}))([^{}]+?[^\\]{})", c, c, borrow, c)).unwrap();
+        let re = Regex::new(&format!(r"^{}([^{}]+?[^\\]{})", c, borrow, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
-            let inner_text = mat.get(4).unwrap().as_str();
+            let inner_text = mat.get(1).unwrap().as_str();
             let token = SpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 1]));
             return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 1);
         }
@@ -163,11 +160,11 @@ impl<'a> Tokenizer<'a> {
         (alt, link)
     }
 
-    pub fn get_left_text(text: &str, index: usize) -> &str {
+    pub fn is_prev_backslash(text: &str, index: usize) -> bool {
         if index == 0 {
-            text
+            false
         } else {
-            &text[index - 1..]
+            text[index - 1..index] == *"\\"
         }
     }
 
@@ -179,9 +176,8 @@ impl<'a> Tokenizer<'a> {
         let mut i: usize = 0;
         while i < n {
             let token: InlineToken;
-            if special_tokens.contains(&chars[i]) {
-                // TODO: Check the prev character is not '\'
-                let left_text = Tokenizer::get_left_text(inline_text, i);
+            if special_tokens.contains(&chars[i]) && !Tokenizer::is_prev_backslash(inline_text, i) {
+                let left_text = &inline_text[i..];
                 if chars[i] == '[' {
                     if let Some(t) = Tokenizer::try_link_token(left_text) {
                         i = i + t.len();
@@ -209,7 +205,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
             } else {
-                let mut temp = i;
+                let mut temp = i + 1;
                 while temp < n && !special_tokens.contains(&chars[temp]) {
                     temp += 1;
                 }
