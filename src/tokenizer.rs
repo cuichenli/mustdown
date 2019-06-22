@@ -99,7 +99,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn try_image_token(text: &str) -> Option<ImageToken> {
-        let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"[^\\]?!\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = Tokenizer::get_alt_and_link(&mat);
@@ -109,7 +109,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn try_link_token(text: &str) -> Option<LinkToken> {
-        let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"[^\\]?\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = Tokenizer::get_alt_and_link(&mat);
@@ -118,6 +118,24 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
+    pub fn try_special_token(text: &str) -> (Option<InlineToken>, usize) {
+        let c = &text[0..1];
+        let re = Regex::new(&format!(r"[^\s]?{}(.+?){}", c, c)).unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let inner_text = mat.get(1).unwrap().as_str();
+            let token = SpecialToken::new(c.chars().next().unwrap(), Tokenizer::inline_scanner(inner_text));
+            return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 2);
+        }
+        let re = Regex::new(&format!(r"[^\s]?{}{}(.+?){}{}", c, c, c, c)).unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let inner_text = mat.get(1).unwrap().as_str();
+            let token = DoubleSpecialToken::new(c.chars().next().unwrap(), Tokenizer::inline_scanner(inner_text));
+            return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 4);
+        }
+        (None, 0)
+    }
 
     pub fn get_text_token(text: String) -> InlineToken {
         InlineToken::TextToken(TextToken {
@@ -152,6 +170,7 @@ impl<'a> Tokenizer<'a> {
         while i < n {
             let token: InlineToken;
             if special_tokens.contains(&chars[i]) {
+                // TODO: Check the prev character is not '\'
                 let left_text = Tokenizer::get_left_text(inline_text, i);
                 if chars[i] == '[' {
                     if let Some(t) = Tokenizer::try_link_token(left_text) {
@@ -170,8 +189,14 @@ impl<'a> Tokenizer<'a> {
                         i += 1;
                     }
                 } else {
-                    token = InlineToken::SpecialToken(SpecialToken::new(chars[i]));
-                    i += 1;
+                    let (option, step) = Tokenizer::try_special_token(left_text);
+                    if let Some(t) = option {
+                        i += step;
+                        token = t;
+                    } else {
+                        token = Tokenizer::get_text_token(chars[i].to_string());
+                        i += 1;
+                    }
                 }
             } else {
                 let mut temp = i;
