@@ -22,7 +22,7 @@ impl SpecialToken {
     pub fn new(token: char, inline_tokens: Vec<InlineToken>) -> Self {
         Self {
             token,
-            inline_tokens
+            inline_tokens,
         }
     }
 }
@@ -36,7 +36,7 @@ impl DoubleSpecialToken {
     pub fn new(token: char, inline_tokens: Vec<InlineToken>) -> Self {
         Self {
             token,
-            inline_tokens
+            inline_tokens,
         }
     }
 }
@@ -44,14 +44,11 @@ impl DoubleSpecialToken {
 pub struct LinkToken {
     pub alt: String,
     pub link: String,
-
 }
 
 impl LinkToken {
-    pub fn new(alt: String, link: String ) -> Self {
-        Self {
-            alt, link
-        }
+    pub fn new(alt: String, link: String) -> Self {
+        Self { alt, link }
     }
 
     pub fn len(&self) -> usize {
@@ -66,10 +63,8 @@ pub struct ImageToken {
 }
 
 impl ImageToken {
-    pub fn new(alt: String, link: String ) -> Self {
-        Self {
-            alt, link
-        }
+    pub fn new(alt: String, link: String) -> Self {
+        Self { alt, link }
     }
 
     pub fn len(&self) -> usize {
@@ -220,7 +215,6 @@ pub mod tests {
         assert_text_token(&result[1], r"_");
     }
 
-
     #[test]
     fn test_special_token() {
         let result = Tokenizer::inline_scanner("*Test*");
@@ -351,7 +345,6 @@ pub mod tests {
         assert_text_token(&result[2], "*");
         assert_text_token(&result[3], "_");
         assert_text_token(&result[4], "`");
-
     }
 
 }

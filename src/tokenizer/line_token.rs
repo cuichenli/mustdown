@@ -58,9 +58,11 @@ pub struct UnorderedList {
 
 #[cfg(test)]
 pub mod tests {
+    use super::super::inline_token::tests::{
+         assert_special_token_group, assert_text_token,
+    };
     use super::*;
     use crate::Tokenizer;
-    use super::super::inline_token::tests::{ assert_text_token, assert_special_token, assert_special_token_group };
 
     #[test]
     fn test_line_scanner_header_token() {
