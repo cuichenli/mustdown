@@ -90,15 +90,32 @@ pub mod tests {
         }
     }
 
-    pub fn assert_special_token_group(tokens: &[InlineToken], text: &str, symbol: char) {
-        assert_eq!(tokens.len(), 3);
-        assert_special_token(&tokens[0], symbol);
-        if let InlineToken::TextToken(token) = &tokens[1] {
-            assert_eq!(token.text, text);
+    pub fn assert_special_token_group(token: &InlineToken, text: &str, symbol: char) {
+        assert_special_token(token, symbol);
+        if let InlineToken::SpecialToken(t) = token {
+            assert_eq!(t.inline_tokens.len(), 1 as usize);
+            assert_text_token(&t.inline_tokens[0], text);
         } else {
             panic!();
         }
-        assert_special_token(&tokens[2], symbol)
+    }
+
+    pub fn assert_double_special_token(token: &InlineToken, symbol: char) {
+        if let InlineToken::DoubleSpecialToken(token) = token {
+            assert_eq!(token.token, symbol);
+        } else {
+            panic!()
+        }
+    }
+    pub fn assert_double_special_token_group(token: &InlineToken, text: &str, symbol: char) {
+        assert_double_special_token(token, symbol);
+        if let InlineToken::DoubleSpecialToken(t) = token {
+            assert_eq!(t.inline_tokens.len(), 1 as usize);
+            assert_text_token(&t.inline_tokens[0], text);
+        } else {
+            println!("{:?}", token);
+            panic!();
+        }
     }
 
     pub fn assert_text_token(token: &InlineToken, text: &str) {
@@ -112,44 +129,36 @@ pub mod tests {
     #[test]
     fn test_special_token() {
         let result = Tokenizer::inline_scanner("*Test*");
-        assert_special_token_group(&result, "Test", '*');
+        assert_special_token_group(&result[0], "Test", '*');
     }
 
     #[test]
     fn test_special_token_start_with_space() {
         let result = Tokenizer::inline_scanner(" *Test*");
         assert_text_token(&result[0], " ");
-        assert_special_token_group(&result[1..], "Test", '*');
+        assert_special_token_group(&result[1], "Test", '*');
     }
 
     #[test]
     fn test_special_token_with_start_space_and_end_words() {
         let result = Tokenizer::inline_scanner(" *Test* another test");
-        assert_eq!(result.len(), 5);
+        assert_eq!(result.len(), 3);
         assert_text_token(&result[0], " ");
-        assert_special_token_group(&result[1..4], "Test", '*');
-        assert_text_token(&result[4], " another test");
+        assert_special_token_group(&result[1], "Test", '*');
+        assert_text_token(&result[2], " another test");
     }
 
     #[test]
     fn test_double_special_token() {
         let result = Tokenizer::inline_scanner("**Test**");
-        assert_special_token(&result[0], '*');
-        assert_special_token(&result[1], '*');
-        assert_text_token(&result[2], "Test");
-        assert_special_token(&result[3], '*');
-        assert_special_token(&result[4], '*');
+        assert_double_special_token_group(&result[0], "Test", '*');
     }
 
     #[test]
     fn test_double_special_token_with_start_space() {
         let result = Tokenizer::inline_scanner(" **Test**");
         assert_text_token(&result[0], " ");
-        assert_special_token(&result[1], '*');
-        assert_special_token(&result[2], '*');
-        assert_text_token(&result[3], "Test");
-        assert_special_token(&result[4], '*');
-        assert_special_token(&result[5], '*');
+        assert_double_special_token_group(&result[1], "Test", '*');
     }
 
     #[test]
@@ -244,9 +253,9 @@ pub mod tests {
         assert_eq!(result.len(), 5);
         assert_text_token(&result[0], "!");
         assert_text_token(&result[1], "[");
-        assert_special_token(&result[2], '*');
-        assert_special_token(&result[3], '_');
-        assert_special_token(&result[4], '`');
+        assert_text_token(&result[2], "*");
+        assert_text_token(&result[3], "_");
+        assert_text_token(&result[4], "`");
 
     }
 

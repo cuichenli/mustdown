@@ -191,9 +191,9 @@ pub mod tests {
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
-            assert_eq!(inline_tokens.len(), 4);
+            assert_eq!(inline_tokens.len(), 2);
             assert_text_token(&inline_tokens[0], "this is");
-            assert_special_token_group(&inline_tokens[1..4], "a bold", '*');
+            assert_special_token_group(&inline_tokens[1], "a bold", '*');
         } else {
             panic!();
         }
