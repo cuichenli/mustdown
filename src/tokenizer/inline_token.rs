@@ -86,6 +86,7 @@ pub mod tests {
         if let InlineToken::SpecialToken(token) = token {
             assert_eq!(token.token, symbol);
         } else {
+            println!("{:?}", token);
             panic!()
         }
     }
@@ -104,6 +105,7 @@ pub mod tests {
         if let InlineToken::DoubleSpecialToken(token) = token {
             assert_eq!(token.token, symbol);
         } else {
+            println!("{:?}", token);
             panic!()
         }
     }
@@ -122,12 +124,62 @@ pub mod tests {
         if let InlineToken::TextToken(token) = token {
             assert_eq!(token.text, text);
         } else {
+            println!("{:?}", token);
             panic!();
         }
     }
 
     #[test]
-    fn test_special_token() {
+    fn test_two_asterisk() {
+        let text = "**";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], "*");
+        assert_text_token(&result[1], "*");
+    }
+
+    #[test]
+    fn test_escape_asterisk() {
+        let text = r"\*Test*";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], r"\");
+        assert_text_token(&result[1], "*");
+        assert_text_token(&result[2], "Test");
+        assert_text_token(&result[3], "*");
+    }
+
+    #[test]
+    fn test_right_escape_asterisk() {
+        let text = r"*Test\*";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], "*");
+        assert_text_token(&result[1], r"Test\");
+        assert_text_token(&result[2], "*");
+    }
+
+    #[test]
+    fn test_escape_double_asterisk() {
+        let text = r"\**Test*";
+        let result = Tokenizer::inline_scanner(text);
+        assert_text_token(&result[0], r"\");
+        assert_text_token(&result[1], r"*");
+        assert_special_token_group(&result[2], "Test", '*');
+    }
+
+    #[test]
+    fn test_escape_right_double_asterisk() {
+        let text = r"*Test\**";
+        let result = Tokenizer::inline_scanner(text);
+        let token = &result[0];
+        assert_special_token(token, '*');
+        if let InlineToken::SpecialToken(t) = token {
+            assert_eq!(t.inline_tokens.len(), 2 as usize);
+            assert_text_token(&t.inline_tokens[0], r"Test\");
+            assert_text_token(&t.inline_tokens[1], "*");
+        } else {
+            println!("{:?}", token);
+            panic!();
+        }
+    }
         let result = Tokenizer::inline_scanner("*Test*");
         assert_special_token_group(&result[0], "Test", '*');
     }
