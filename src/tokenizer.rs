@@ -128,19 +128,20 @@ impl<'a> Tokenizer<'a> {
         } else {
             c = borrow;
         }
-        let re = Regex::new(&format!(r"[^\\]?{}{}(.+?){}{}", c, c, c, c)).unwrap();
+        let re = Regex::new(&format!(r"((^[^\\]{}{{2}})|(^{}{{2}}))(.+?[^\\]{}{{2}})", c, c, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
-            let inner_text = mat.get(1).unwrap().as_str();
-            let token = DoubleSpecialToken::new(f, Tokenizer::inline_scanner(inner_text));
-            return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 4);
+            println!("{:?}", mat);
+            let inner_text = mat.get(4).unwrap().as_str();
+            let token = DoubleSpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 2]));
+            return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 2);
         }
-        let re = Regex::new(&format!(r"[^\\]?{}([^{}]+?){}", c, borrow, c)).unwrap();
+        let re = Regex::new(&format!(r"((^[^\\]{})|(^{}))([^{}]+?[^\\]{})", c, c, borrow, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
-            let inner_text = mat.get(1).unwrap().as_str();
-            let token = SpecialToken::new(f, Tokenizer::inline_scanner(inner_text));
-            return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 2);
+            let inner_text = mat.get(4).unwrap().as_str();
+            let token = SpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 1]));
+            return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 1);
         }
 
         (None, 0)
