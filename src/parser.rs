@@ -20,8 +20,25 @@ impl Parser {
 
     pub fn __inline_parse<'a>(tokens: &'a Vec<InlineToken>, token_records: &mut Vec<&'a SpecialToken>, text_record: &mut Vec<String>, temp_text: &mut Vec<String>, index: usize) {
         if index >= tokens.len() {
+            let mut i = 0;
+            let mut j = 0;
+            while i < token_records.len() && j < temp_text.len() {
+                let t = token_records[i].token;
+                text_record.push(format!("{}", t));
+                text_record.push(format!("{}", temp_text[j]));
+                i += 1;
+                j += 1;
+            }
+            for temp in i..token_records.len() {
+                let t = token_records[temp].token;
+                text_record.push(format!("{}", t));
+            }
+            for temp in j..temp_text.len() {
+                text_record.push(format!("{}", temp_text[temp]));
+            }
             return
         }
+        println!("{:?}", tokens[index]);
         let mut index = index;
         match &tokens[index] {
             InlineToken::TextToken(_) => {
@@ -45,6 +62,7 @@ impl Parser {
                     token_records.push(&token);
                 } else {
                     let last = token_records.last().unwrap();
+                    let temp = last.token;   // Temp symbol
                     if last.token == token.token {
                         let mut symbol = "em";
                         token_records.pop();
@@ -52,7 +70,7 @@ impl Parser {
                             let last = token_records.last().unwrap();
                             if index + 1 < tokens.len() {
                                 if let InlineToken::SpecialToken(token) = &tokens[index + 1] {
-                                    if token.token == last.token {
+                                    if token.token == last.token && token.token == temp {
                                         symbol = "strong";
                                         index += 1;
                                         token_records.pop();
@@ -63,7 +81,11 @@ impl Parser {
 
                         let record_string = temp_text.pop().unwrap();
                         let result = format!("<{}>{}</{}>", symbol, record_string, symbol);
-                        text_record.push(result);
+                        if token_records.len() > 0 {
+                            temp_text.push(result)
+                        } else {
+                            text_record.push(result);
+                        }
                     } else {
                         token_records.push(&token);
                     }
@@ -255,17 +277,6 @@ mod test {
 
     #[test]
     fn test_italic_inline_parser() {
-        // let parser = Parser { tokens: Vec::new() };
-        // let text_token = TextToken {
-        //     text: String::from("this is a test"),
-        // };
-        // let inline_tokens = vec![InlineToken::TextToken(text_token), InlineToken::SpecialToken];
-        // let special_token = SpecialToken {
-        //     token: '*',
-        //     inline_tokens: inline_tokens,
-        // };
-        // let token = InlineToken::SpecialToken(special_token);
-        // let result = parser.inline_parse(&token);
         let tokens = special_token_group_factory('*', String::from("this is a test"));
         let result = Parser::_inline_parse(&tokens);
         assert_eq!("<em>this is a test</em>", result);
@@ -307,16 +318,53 @@ mod test {
 
     #[test]
     fn test_strong_inline_parser() {
-        let parser = Parser { tokens: Vec::new() };
-        let token = InlineToken::DoubleSpecialToken(DoubleSpecialToken {
-            token: '*',
-            inline_tokens: vec![InlineToken::TextToken(TextToken {
-                text: String::from("this is a test"),
-            })],
-        });
-        let result = parser.inline_parse(&token);
+        let token = vec![special_token_factory('*'), special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*'), special_token_factory('*')];
+        let result = Parser::_inline_parse(&token);
         assert_eq!("<strong>this is a test</strong>", result);
     }
+
+    // #[test]
+    // fn test_left_broken_strong() {
+    //     let token = vec![special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*'), special_token_factory('*'), ];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("<em>this is a test</em>*", result);
+    // }
+
+    // #[test]
+    // fn test_right_broken_strong() {
+    //     let token = vec![special_token_factory('*'), special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*')];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("*<em>this is a test</em>", result);
+    // }
+
+    // #[test]
+    // fn test_right_one_more_strong() {
+    //     let token = vec![special_token_factory('*'), special_token_factory('*'), special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*'), special_token_factory('*')];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("*<strong>this is a test</strong>", result);
+    // }
+
+    // #[test]
+    // fn test_left_one_more_strong() {
+    //     let token = vec![ special_token_factory('*'), special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*'), special_token_factory('*'), special_token_factory('*')];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("<strong>this is a test</strong>*", result);
+    // }
+
+    // #[test]
+    // fn test_broken_em() {
+    //     let token = vec![special_token_factory('_'), text_token_factory(String::from("this is first test")), special_token_factory('*'), text_token_factory(String::from("this is a test")) ];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("_this is first test*this is a test", result);
+    // }
+
+    // #[test]
+    // fn test_differnt_symbol_em() {
+    //     let token = vec![special_token_factory('_'), special_token_factory('*'), text_token_factory(String::from("this is a test")), special_token_factory('*'), special_token_factory('_')];
+    //     let result = Parser::_inline_parse(&token);
+    //     assert_eq!("<em><em>this is a test</em></em>", result);
+    // }
+
 
     #[test]
     fn test_code_inline_parser() {
