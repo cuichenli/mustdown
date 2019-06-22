@@ -22,18 +22,9 @@ pub struct Tokenizer<'a> {
     special_tokens: HashMap<char, &'a str>,
 }
 
+const SPECIAL_TOKEN: &'static [char] = &['_', '*', '`', '[', '!' ];
+
 impl<'a> Tokenizer<'a> {
-    pub fn new(text: &'a str) -> Self {
-        let special_tokens: HashMap<char, &str> =
-            [('_', "_"), ('*', "\\*"), ('`', "`"), ('[', "["), ('!', "!")]
-                .iter()
-                .cloned()
-                .collect();
-        Self {
-            text,
-            special_tokens,
-        }
-    }
 
     pub fn is_list(line: &str) -> Option<regex::Captures> {
         let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
@@ -61,7 +52,7 @@ impl<'a> Tokenizer<'a> {
         return false;
     }
 
-    pub fn line_scanner(&self, line: &str, tokens: &mut Vec<LineToken>) {
+    pub fn line_scanner(line: &str, tokens: &mut Vec<LineToken>) {
         let chars = line.as_bytes();
         let mut inner_text = line;
         match chars[0] as char {
@@ -75,7 +66,7 @@ impl<'a> Tokenizer<'a> {
 
                         let token = HeaderToken {
                             level,
-                            inline_tokens: self.inline_scanner(inner_text),
+                            inline_tokens: Tokenizer::inline_scanner(inner_text),
                         };
                         tokens.push(LineToken::HeaderToken(token));
                     }
@@ -85,21 +76,21 @@ impl<'a> Tokenizer<'a> {
             _ => (),
         }
         let token = LineToken::Paragraph(Paragraph {
-            inline_tokens: self.inline_scanner(inner_text),
+            inline_tokens: Tokenizer::inline_scanner(inner_text),
         });
         tokens.push(token);
     }
 
-    pub fn block_parser(&self, lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+    pub fn block_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
         let text = lines.join("\n");
         let block = CodeBlock::new(text);
         tokens.push(LineToken::CodeBlock(block));
     }
 
-    pub fn quote_parser(&self, lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+    pub fn quote_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
         let mut inline_tokens: Vec<InlineToken> = Vec::new();
         for l in lines {
-            inline_tokens.append(&mut self.inline_scanner(l));
+            inline_tokens.append(&mut Tokenizer::inline_scanner(l));
             inline_tokens.push(InlineToken::BreakToken);
         }
         inline_tokens.pop();
@@ -127,6 +118,7 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
+
     pub fn get_text_token(text: String) -> InlineToken {
         InlineToken::TextToken(TextToken {
             text
@@ -143,16 +135,24 @@ impl<'a> Tokenizer<'a> {
         (alt, link)
     }
 
-    pub fn inline_scanner(&self, inline_text: &str) -> Vec<InlineToken> {
+    pub fn get_left_text(text: &str, index: usize) -> &str {
+        if index == 0 {
+            text
+        } else {
+            &text[index - 1..]
+        }
+    }
+
+    pub fn inline_scanner(inline_text: &str) -> Vec<InlineToken> {
         let mut tokens: Vec<InlineToken> = Vec::new();
         let n = inline_text.len();
         let chars: Vec<char> = inline_text.chars().collect();
-        let special_tokens = &self.special_tokens;
+        let special_tokens = SPECIAL_TOKEN;
         let mut i: usize = 0;
         while i < n {
             let token: InlineToken;
-            if special_tokens.contains_key(&chars[i]) {
-                let left_text = &inline_text[i..];
+            if special_tokens.contains(&chars[i]) {
+                let left_text = Tokenizer::get_left_text(inline_text, i);
                 if chars[i] == '[' {
                     if let Some(t) = Tokenizer::try_link_token(left_text) {
                         i = i + t.len();
@@ -175,7 +175,7 @@ impl<'a> Tokenizer<'a> {
                 }
             } else {
                 let mut temp = i;
-                while temp < n && !special_tokens.contains_key(&chars[temp]) {
+                while temp < n && !special_tokens.contains(&chars[temp]) {
                     temp += 1;
                 }
                 token = InlineToken::TextToken(TextToken {
@@ -188,9 +188,9 @@ impl<'a> Tokenizer<'a> {
         tokens
     }
 
-    pub fn scanner(&self) -> Vec<LineToken> {
+    pub fn scanner(text: &str) -> Vec<LineToken> {
         let mut result: Vec<LineToken> = Vec::new();
-        let lines = self.text.split("\n");
+        let lines = text.split("\n");
         let lines: Vec<&str> = lines.collect();
         let mut i: usize = 0;
         while i < lines.len() {
@@ -206,7 +206,7 @@ impl<'a> Tokenizer<'a> {
                     block.push(lines[i]);
                     i += 1;
                 }
-                self.block_parser(&block, &mut result);
+                Tokenizer::block_parser(&block, &mut result);
             } else if line[0..1] == *">" {
                 let mut temp = vec![&lines[i][1..]];
                 i += 1;
@@ -219,7 +219,7 @@ impl<'a> Tokenizer<'a> {
                 } else {
                     i -= 1;
                 }
-                self.quote_parser(&temp, &mut result);
+                Tokenizer::quote_parser(&temp, &mut result);
             } else if let Some(ref v) = Tokenizer::is_list(line) {
                 let left = v.get(v.len() - 1).unwrap().as_str();
                 let token: LineToken;
@@ -228,7 +228,7 @@ impl<'a> Tokenizer<'a> {
                         order: line.split(".").collect::<Vec<&str>>()[0]
                             .parse::<usize>()
                             .unwrap(),
-                        inline_tokens: self.inline_scanner(left),
+                        inline_tokens: Tokenizer::inline_scanner(left),
                     });
                     if Tokenizer::same_list_block_as_prev(&token, &result) {
                         let last = result.last_mut().unwrap();
@@ -242,7 +242,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 } else {
                     token = LineToken::UnorderedList(UnorderedList {
-                        inline_tokens: self.inline_scanner(left),
+                        inline_tokens: Tokenizer::inline_scanner(left),
                     });
                     if Tokenizer::same_list_block_as_prev(&token, &result) {
                         let last = result.last_mut().unwrap();
@@ -256,7 +256,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
             } else {
-                self.line_scanner(&line, &mut result);
+                Tokenizer::line_scanner(&line, &mut result);
             }
             i += 1;
         }

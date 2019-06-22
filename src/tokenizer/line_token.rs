@@ -64,8 +64,7 @@ pub mod tests {
 
     #[test]
     fn test_line_scanner_header_token() {
-        let tokenizer = Tokenizer::new("## Test");
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner("## Test");
         let head_token = &result[0];
         let level: usize;
         let inline_token: &Vec<InlineToken>;
@@ -86,9 +85,9 @@ pub mod tests {
     #[test]
     fn test_block_parser() {
         let lines = vec!["this", "is", "a", "test"];
-        let tokenizer = Tokenizer::new("");
+        // let tokenizer = Tokenizer::scanner("");
         let mut tokens: Vec<LineToken> = Vec::new();
-        tokenizer.block_parser(&lines, &mut tokens);
+        Tokenizer::block_parser(&lines, &mut tokens);
         assert_eq!(tokens.len(), 1);
         let token = tokens.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
@@ -103,8 +102,7 @@ pub mod tests {
         let text = "```\n\
                     this is a test \n\
                     ```";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         let token = result.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
@@ -120,8 +118,7 @@ pub mod tests {
                     this is a test \n\
                     ```\n\
                     this is another test";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 2);
         let token = result.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
@@ -144,8 +141,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_multiple_lines() {
         let text = ">this is  \na quote";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -173,8 +169,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_single_line() {
         let text = ">this is\n";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -192,8 +187,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_inline_tokens_with_single_line() {
         let text = ">this is*a bold*\n";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -208,8 +202,7 @@ pub mod tests {
     #[test]
     fn test_single_line_quote_with_lines_surrounding() {
         let text = "first paragraph\n>a quote\nsecond paragraph";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 1);
@@ -239,8 +232,7 @@ pub mod tests {
     #[test]
     fn test_multiple_lines_quote_with_lines_surrounding() {
         let text = "first paragraph\n>a quote  \nanother quote\nsecond paragraph";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 3);
@@ -278,8 +270,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_empty_quote() {
         let text = ">";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             assert_eq!(token.inline_tokens.len(), 0);
@@ -291,8 +282,7 @@ pub mod tests {
     #[test]
     fn test_ordered_list() {
         let text = "1. this\n2. is\n3. a\n4. test";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::OrderedListBlock(token) = &result[0] {
             let list = &token.ordered_lists;
@@ -345,8 +335,7 @@ pub mod tests {
     #[test]
     fn test_unordered_list() {
         let text = "- this\n- is\n- a\n- test";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::UnorderedListBlock(token) = &result[0] {
             let list = &token.unordered_lists;
@@ -395,8 +384,7 @@ pub mod tests {
     #[test]
     fn test_unordered_list_with_lines_surrounded() {
         let text = "a simple line\n- a list\n- another\ntest";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Paragraph(token) = &result[0] {
             let tokens = &token.inline_tokens;
@@ -455,8 +443,7 @@ pub mod tests {
     #[test]
     fn test_ordered_list_with_lines_surrounded() {
         let text = "a simple line\n1. a list\n2. another\ntest";
-        let tokenizer = Tokenizer::new(text);
-        let result = tokenizer.scanner();
+        let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Paragraph(token) = &result[0] {
             let tokens = &token.inline_tokens;

@@ -101,23 +101,20 @@ pub mod tests {
 
     #[test]
     fn test_special_token() {
-        let tokenizer = Tokenizer::new("");
-        let result = &tokenizer.inline_scanner("*Test*");
-        assert_special_token_group(result, "Test", '*');
+        let result = Tokenizer::inline_scanner("*Test*");
+        assert_special_token_group(&result, "Test", '*');
     }
 
     #[test]
     fn test_special_token_start_with_space() {
-        let tokenizer = Tokenizer::new("");
-        let result = &tokenizer.inline_scanner(" *Test*");
+        let result = Tokenizer::inline_scanner(" *Test*");
         assert_text_token(&result[0], " ");
         assert_special_token_group(&result[1..], "Test", '*');
     }
 
     #[test]
     fn test_special_token_with_start_space_and_end_words() {
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(" *Test* another test");
+        let result = Tokenizer::inline_scanner(" *Test* another test");
         assert_eq!(result.len(), 5);
         assert_text_token(&result[0], " ");
         assert_special_token_group(&result[1..4], "Test", '*');
@@ -126,8 +123,7 @@ pub mod tests {
 
     #[test]
     fn test_double_special_token() {
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner("**Test**");
+        let result = Tokenizer::inline_scanner("**Test**");
         assert_special_token(&result[0], '*');
         assert_special_token(&result[1], '*');
         assert_text_token(&result[2], "Test");
@@ -137,8 +133,7 @@ pub mod tests {
 
     #[test]
     fn test_double_special_token_with_start_space() {
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(" **Test**");
+        let result = Tokenizer::inline_scanner(" **Test**");
         assert_text_token(&result[0], " ");
         assert_special_token(&result[1], '*');
         assert_special_token(&result[2], '*');
@@ -149,8 +144,7 @@ pub mod tests {
 
     #[test]
     fn test_code_special_token() {
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner("`Test`");
+        let result = Tokenizer::inline_scanner("`Test`");
         let token1 = &result[0];
         assert_special_token(token1, '`');
     }
@@ -158,8 +152,7 @@ pub mod tests {
     #[test]
     fn test_link_token() {
         let text = "[Link](http://a.com)";
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(text);
+        let result = Tokenizer::inline_scanner(text);
         assert_eq!(result.len(), 1);
         let token = &result[0];
         match token {
@@ -174,8 +167,7 @@ pub mod tests {
     #[test]
     fn test_link_token_with_surround_text() {
         let text = "this is [Link](to_test) to test";
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(text);
+        let result = Tokenizer::inline_scanner(text);
         assert_eq!(result.len(), 3);
         let token = &result[0];
         if let InlineToken::TextToken(token) = token {
@@ -199,8 +191,7 @@ pub mod tests {
     #[test]
     fn test_image_token() {
         let text = "![Link](http://a.com)";
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(text);
+        let result = Tokenizer::inline_scanner(text);
         assert_eq!(result.len(), 1);
         let token = &result[0];
         match token {
@@ -215,8 +206,7 @@ pub mod tests {
     #[test]
     fn test_image_token_with_surround_text() {
         let text = "this is ![Link](to_test) to test";
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(text);
+        let result = Tokenizer::inline_scanner(text);
         assert_eq!(result.len(), 3);
         let token = &result[0];
         if let InlineToken::TextToken(token) = token {
@@ -240,8 +230,7 @@ pub mod tests {
     #[test]
     fn test_all_special_tokens_with_no_usage() {
         let text = "![*_`";
-        let tokenizer = Tokenizer::new("");
-        let result = tokenizer.inline_scanner(text);
+        let result = Tokenizer::inline_scanner(text);
         assert_eq!(result.len(), 5);
         assert_text_token(&result[0], "!");
         assert_text_token(&result[1], "[");
