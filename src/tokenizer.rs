@@ -11,19 +11,16 @@ pub use line_token::{
     UnorderedList, UnorderedListBlock,
 };
 use regex::Regex;
-use std::collections::HashMap;
 
 const ORDERED_LIST: u8 = 1;
 const UNORDERED_LIST: u8 = 2;
 const NOT_LIST: u8 = 0;
 
-pub struct Tokenizer {
-}
+pub struct Tokenizer {}
 
-const SPECIAL_TOKEN: &'static [char] = &['_', '*', '`', '[', '!' ];
+const SPECIAL_TOKEN: &'static [char] = &['_', '*', '`', '[', '!'];
 
-impl Tokenizer{
-
+impl Tokenizer {
     pub fn is_list(line: &str) -> Option<regex::Captures> {
         let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
         let caps = re.captures(line);
@@ -130,14 +127,23 @@ impl Tokenizer{
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let inner_text = mat.get(1).unwrap().as_str();
-            let token = DoubleSpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 2]));
-            return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 2);
+            let token = DoubleSpecialToken::new(
+                f,
+                Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 2]),
+            );
+            return (
+                Some(InlineToken::DoubleSpecialToken(token)),
+                inner_text.len() + 2,
+            );
         }
         let re = Regex::new(&format!(r"^{}([^{}]+?[^\\]{})", c, borrow, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let inner_text = mat.get(1).unwrap().as_str();
-            let token = SpecialToken::new(f, Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 1]));
+            let token = SpecialToken::new(
+                f,
+                Tokenizer::inline_scanner(&inner_text[..inner_text.len() - 1]),
+            );
             return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 1);
         }
 
@@ -145,9 +151,7 @@ impl Tokenizer{
     }
 
     pub fn get_text_token(text: String) -> InlineToken {
-        InlineToken::TextToken(TextToken {
-            text
-        })
+        InlineToken::TextToken(TextToken { text })
     }
 
     pub fn get_nth_cap(mat: &regex::Captures, n: usize) -> String {
