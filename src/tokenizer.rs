@@ -118,22 +118,31 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
-    pub fn try_special_token(text: &str) -> (Option<InlineToken>, usize) {
-        let c = &text[0..1];
-        let re = Regex::new(&format!(r"[^\s]?{}(.+?){}", c, c)).unwrap();
-        let caps = re.captures(text);
-        if let Some(mat) = caps {
-            let inner_text = mat.get(1).unwrap().as_str();
-            let token = SpecialToken::new(c.chars().next().unwrap(), Tokenizer::inline_scanner(inner_text));
-            return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 2);
+    pub fn try_special_token(text: &str, first_token: &char) -> (Option<InlineToken>, usize) {
+        let c: &str;
+        let temp = &[*first_token as u8];
+        let borrow = std::str::from_utf8(temp).unwrap();
+        let f = borrow.chars().next().unwrap();
+        if f == '*' {
+            c = r"\*";
+        } else {
+            c = borrow;
         }
-        let re = Regex::new(&format!(r"[^\s]?{}{}(.+?){}{}", c, c, c, c)).unwrap();
+        let re = Regex::new(&format!(r"[^\\]?{}{}(.+?){}{}", c, c, c, c)).unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let inner_text = mat.get(1).unwrap().as_str();
-            let token = DoubleSpecialToken::new(c.chars().next().unwrap(), Tokenizer::inline_scanner(inner_text));
+            let token = DoubleSpecialToken::new(f, Tokenizer::inline_scanner(inner_text));
             return (Some(InlineToken::DoubleSpecialToken(token)), inner_text.len() + 4);
         }
+        let re = Regex::new(&format!(r"[^\\]?{}([^{}]+?){}", c, borrow, c)).unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let inner_text = mat.get(1).unwrap().as_str();
+            let token = SpecialToken::new(f, Tokenizer::inline_scanner(inner_text));
+            return (Some(InlineToken::SpecialToken(token)), inner_text.len() + 2);
+        }
+
         (None, 0)
     }
 
@@ -189,7 +198,7 @@ impl<'a> Tokenizer<'a> {
                         i += 1;
                     }
                 } else {
-                    let (option, step) = Tokenizer::try_special_token(left_text);
+                    let (option, step) = Tokenizer::try_special_token(left_text, &chars[i]);
                     if let Some(t) = option {
                         i += step;
                         token = t;
