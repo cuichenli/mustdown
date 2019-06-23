@@ -42,8 +42,19 @@ pub struct OrderedListBlock {
 
 impl OrderedListBlock {
     pub fn new(token: LineToken) -> Self {
-        Self {
-            lists: vec![token],
+        if let LineToken::OrderedList(_) = token {
+            Self {
+                lists: vec![token],
+            }
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn push(&mut self, token: LineToken) {
+        match token {
+            LineToken::OrderedList(_) => self.lists.push(token),
+            _ => panic!()
         }
     }
 }
@@ -55,8 +66,19 @@ pub struct UnorderedListBlock {
 
 impl UnorderedListBlock {
     pub fn new(token: LineToken) -> Self {
-        Self {
-            lists: vec![token],
+        if let LineToken::UnorderedList(_) = token {
+            Self {
+                lists: vec![token],
+            }
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn push(&mut self, token: LineToken) {
+        match token {
+            LineToken::UnorderedList(_) => self.lists.push(token),
+            _ => panic!()
         }
     }
 }

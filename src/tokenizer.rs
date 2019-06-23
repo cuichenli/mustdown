@@ -274,8 +274,8 @@ impl Tokenizer {
                 if Tokenizer::same_list_block_as_prev(&token, &result) {
                     let last = result.last_mut().unwrap();
                     match last {
-                        LineToken::OrderedListBlock(t) => t.lists.push(token),
-                        LineToken::UnorderedListBlock(t) => t.lists.push(token),
+                        LineToken::OrderedListBlock(t) => t.push(token),
+                        LineToken::UnorderedListBlock(t) => t.push(token),
                         _ => panic!(),
                     }
                 } else {
