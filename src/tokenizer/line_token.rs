@@ -40,9 +40,25 @@ pub struct OrderedListBlock {
     pub ordered_lists: Vec<LineToken>,
 }
 
+impl OrderedListBlock {
+    pub fn new(token: LineToken) -> Self {
+        Self {
+            ordered_lists: vec![token],
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct UnorderedListBlock {
     pub unordered_lists: Vec<LineToken>,
+}
+
+impl UnorderedListBlock {
+    pub fn new(token: LineToken) -> Self {
+        Self {
+            unordered_lists: vec![token],
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -51,16 +67,29 @@ pub struct OrderedList {
     pub inline_tokens: Vec<InlineToken>,
 }
 
+impl OrderedList {
+    pub fn new(inline_tokens: Vec<InlineToken>) -> Self {
+        Self {
+            order: 0,
+            inline_tokens,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct UnorderedList {
     pub inline_tokens: Vec<InlineToken>,
 }
 
+impl UnorderedList {
+    pub fn new(symbol: char, inline_tokens: Vec<InlineToken>) -> Self {
+        Self { inline_tokens }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
-    use super::super::inline_token::tests::{
-         assert_special_token_group, assert_text_token,
-    };
+    use super::super::inline_token::tests::{assert_special_token_group, assert_text_token};
     use super::*;
     use crate::Tokenizer;
 
@@ -290,7 +319,6 @@ pub mod tests {
             let list = &token.ordered_lists;
             assert_eq!(list.len(), 4);
             if let LineToken::OrderedList(token) = &list[0] {
-                assert_eq!(token.order, 1);
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
                     assert_eq!(token.text, "this");
                 } else {
@@ -300,7 +328,6 @@ pub mod tests {
                 panic!();
             }
             if let LineToken::OrderedList(token) = &list[1] {
-                assert_eq!(token.order, 2);
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
                     assert_eq!(token.text, "is");
                 } else {
@@ -310,7 +337,6 @@ pub mod tests {
                 panic!();
             }
             if let LineToken::OrderedList(token) = &list[2] {
-                assert_eq!(token.order, 3);
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
                     assert_eq!(token.text, "a");
                 } else {
@@ -320,7 +346,6 @@ pub mod tests {
                 panic!();
             }
             if let LineToken::OrderedList(token) = &list[3] {
-                assert_eq!(token.order, 4);
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
                     assert_eq!(token.text, "test");
                 } else {
@@ -464,7 +489,6 @@ pub mod tests {
             assert_eq!(tokens.len(), 2);
             if let LineToken::OrderedList(token) = &tokens[0] {
                 let list = &token.inline_tokens;
-                assert_eq!(token.order, 1);
                 assert_eq!(list.len(), 1);
                 if let InlineToken::TextToken(token) = &list[0] {
                     assert_eq!(token.text, "a list");
@@ -476,7 +500,6 @@ pub mod tests {
             }
             if let LineToken::OrderedList(token) = &tokens[1] {
                 let list = &token.inline_tokens;
-                assert_eq!(token.order, 2);
                 assert_eq!(list.len(), 1);
                 if let InlineToken::TextToken(token) = &list[0] {
                     assert_eq!(token.text, "another");

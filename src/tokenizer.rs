@@ -21,10 +21,23 @@ pub struct Tokenizer {}
 const SPECIAL_TOKEN: &'static [char] = &['_', '*', '`', '[', '!'];
 
 impl Tokenizer {
-    pub fn is_list(line: &str) -> Option<regex::Captures> {
+    pub fn is_list(line: &str) -> Option<LineToken> {
         let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
         let caps = re.captures(line);
-        caps
+        if let Some(mat) = caps {
+            let left_text = mat.get(mat.len() - 1).unwrap().as_str();
+            let inline_tokens = Tokenizer::inline_scanner(left_text);
+            if let Some(_) = mat.name("ordered") {
+                let token = OrderedList::new(inline_tokens);
+                Some(LineToken::OrderedList(token))
+            } else {
+                let symbol = line.chars().next().unwrap();
+                let token = UnorderedList::new(symbol, inline_tokens);
+                Some(LineToken::UnorderedList(token))
+            }
+        } else {
+            None
+        }
     }
 
     pub fn is_prev_list(tokens: &Vec<LineToken>) -> u8 {
@@ -114,6 +127,7 @@ impl Tokenizer {
     }
 
     pub fn try_special_token(text: &str, first_token: &char) -> (Option<InlineToken>, usize) {
+        // TODO: Clean this mess
         let c: &str;
         let temp = &[*first_token as u8];
         let borrow = std::str::from_utf8(temp).unwrap();
@@ -241,6 +255,7 @@ impl Tokenizer {
                     block.push(lines[i]);
                     i += 1;
                 }
+                // result should not be passed in to this function
                 Tokenizer::block_parser(&block, &mut result);
             } else if line[0..1] == *">" {
                 let mut temp = vec![&lines[i][1..]];
@@ -255,39 +270,23 @@ impl Tokenizer {
                     i -= 1;
                 }
                 Tokenizer::quote_parser(&temp, &mut result);
-            } else if let Some(ref v) = Tokenizer::is_list(line) {
-                let left = v.get(v.len() - 1).unwrap().as_str();
-                let token: LineToken;
-                if let Some(_) = v.name("ordered") {
-                    token = LineToken::OrderedList(OrderedList {
-                        order: line.split(".").collect::<Vec<&str>>()[0]
-                            .parse::<usize>()
-                            .unwrap(),
-                        inline_tokens: Tokenizer::inline_scanner(left),
-                    });
-                    if Tokenizer::same_list_block_as_prev(&token, &result) {
-                        let last = result.last_mut().unwrap();
-                        if let LineToken::OrderedListBlock(t) = last {
-                            t.ordered_lists.push(token);
-                        }
-                    } else {
-                        result.push(LineToken::OrderedListBlock(OrderedListBlock {
-                            ordered_lists: vec![token],
-                        }));
+            } else if let Some(token) = Tokenizer::is_list(line) {
+                if Tokenizer::same_list_block_as_prev(&token, &result) {
+                    let last = result.last_mut().unwrap();
+                    match last {
+                        LineToken::OrderedListBlock(t) => t.ordered_lists.push(token),
+                        LineToken::UnorderedListBlock(t) => t.unordered_lists.push(token),
+                        _ => panic!(),
                     }
                 } else {
-                    token = LineToken::UnorderedList(UnorderedList {
-                        inline_tokens: Tokenizer::inline_scanner(left),
-                    });
-                    if Tokenizer::same_list_block_as_prev(&token, &result) {
-                        let last = result.last_mut().unwrap();
-                        if let LineToken::UnorderedListBlock(t) = last {
-                            t.unordered_lists.push(token);
+                    match token {
+                        LineToken::UnorderedList(_) => result.push(LineToken::UnorderedListBlock(
+                            UnorderedListBlock::new(token),
+                        )),
+                        LineToken::OrderedList(_) => {
+                            result.push(LineToken::OrderedListBlock(OrderedListBlock::new(token)))
                         }
-                    } else {
-                        result.push(LineToken::UnorderedListBlock(UnorderedListBlock {
-                            unordered_lists: vec![token],
-                        }));
+                        _ => panic!(),
                     }
                 }
             } else {
@@ -306,20 +305,20 @@ mod tests {
     fn test_is_list() {
         let l = "- this";
         Tokenizer::is_list(l).unwrap();
-        let result = Tokenizer::is_list("1. this").unwrap();
-        if result.name("ordered").is_none() {
+        let result = Tokenizer::is_list("1. this");
+        if result.is_none() {
             panic!();
         }
-        let result = Tokenizer::is_list("* this").unwrap();
-        if result.name("ordered").is_some() {
+        let result = Tokenizer::is_list("* this");
+        if result.is_none() {
             panic!();
         }
-        let result = Tokenizer::is_list("2. this").unwrap();
-        if result.name("ordered").is_none() {
+        let result = Tokenizer::is_list("2. this");
+        if result.is_none() {
             panic!();
         }
-        let result = Tokenizer::is_list("23. this").unwrap();
-        if result.name("ordered").is_none() {
+        let result = Tokenizer::is_list("23. this");
+        if result.is_none() {
             panic!();
         }
     }
