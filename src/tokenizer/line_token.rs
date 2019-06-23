@@ -63,14 +63,12 @@ impl UnorderedListBlock {
 
 #[derive(Debug)]
 pub struct OrderedList {
-    pub order: usize,
     pub inline_tokens: Vec<InlineToken>,
 }
 
 impl OrderedList {
     pub fn new(inline_tokens: Vec<InlineToken>) -> Self {
         Self {
-            order: 0,
             inline_tokens,
         }
     }
@@ -79,11 +77,15 @@ impl OrderedList {
 #[derive(Debug)]
 pub struct UnorderedList {
     pub inline_tokens: Vec<InlineToken>,
+    pub symbol: char
 }
 
 impl UnorderedList {
     pub fn new(symbol: char, inline_tokens: Vec<InlineToken>) -> Self {
-        Self { inline_tokens }
+        Self {
+            symbol,
+            inline_tokens
+        }
     }
 }
 
