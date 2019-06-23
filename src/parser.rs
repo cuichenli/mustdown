@@ -387,14 +387,12 @@ mod test {
         let token = OrderedListBlock {
             ordered_lists: vec![
                 LineToken::OrderedList(OrderedList {
-                    order: 1,
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("first"),
                     })],
                 }),
                 LineToken::OrderedList(OrderedList {
-                    order: 1,
-                    inline_tokens: vec![InlineToken::TextToken(TextToken {
+                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("second"),
                     })],
                 }),
@@ -409,11 +407,13 @@ mod test {
         let token = UnorderedListBlock {
             unordered_lists: vec![
                 LineToken::UnorderedList(UnorderedList {
+                    symbol: '*',
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("first"),
                     })],
                 }),
                 LineToken::UnorderedList(UnorderedList {
+                    symbol: '*',
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("second"),
                     })],
