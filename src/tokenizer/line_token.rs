@@ -75,6 +75,15 @@ impl UnorderedListBlock {
         }
     }
 
+    pub fn get_symbol(&self) -> &char {
+        let first = self.lists.first().unwrap();
+        if let LineToken::UnorderedList(t) = first {
+            &t.symbol
+        } else {
+            panic!()
+        }
+    }
+
     pub fn push(&mut self, token: LineToken) {
         match token {
             LineToken::UnorderedList(_) => self.lists.push(token),
