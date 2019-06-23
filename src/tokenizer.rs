@@ -42,7 +42,7 @@ impl Tokenizer {
     pub fn is_prev_list(tokens: &Vec<LineToken>) -> char {
         let last = &tokens.last();
         if let Some(LineToken::UnorderedListBlock(t)) = last {
-            *t.get_symbol()
+            t.get_symbol()
         } else if let Some(LineToken::OrderedListBlock(_)) = last {
             ORDERED_LIST
         } else {
@@ -357,6 +357,7 @@ mod tests {
         assert_eq!(Tokenizer::is_prev_list(&tokens), ORDERED_LIST);
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
         let tokens = vec![LineToken::UnorderedListBlock(UnorderedListBlock {
+            symbol: '*',
             lists: vec![unordered_list],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), '*');
@@ -371,11 +372,16 @@ mod tests {
     #[test]
     fn test_is_prev_same_block() {
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
-        let block = &vec![LineToken::UnorderedListBlock(UnorderedListBlock::new(unordered_list))];
+        let block = &vec![LineToken::UnorderedListBlock(UnorderedListBlock::new(
+            unordered_list,
+        ))];
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
         assert!(Tokenizer::same_list_block_as_prev(&unordered_list, block));
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('-', vec![]));
-        assert_eq!(false, Tokenizer::same_list_block_as_prev(&unordered_list, block));
+        assert_eq!(
+            false,
+            Tokenizer::same_list_block_as_prev(&unordered_list, block)
+        );
     }
 
 }

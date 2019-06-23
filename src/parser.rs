@@ -392,7 +392,7 @@ mod test {
                     })],
                 }),
                 LineToken::OrderedList(OrderedList {
-                     inline_tokens: vec![InlineToken::TextToken(TextToken {
+                    inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("second"),
                     })],
                 }),
@@ -405,6 +405,7 @@ mod test {
     #[test]
     fn test_unordered_list() {
         let token = UnorderedListBlock {
+            symbol: '*',
             lists: vec![
                 LineToken::UnorderedList(UnorderedList {
                     symbol: '*',

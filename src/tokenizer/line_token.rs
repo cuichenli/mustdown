@@ -43,9 +43,7 @@ pub struct OrderedListBlock {
 impl OrderedListBlock {
     pub fn new(token: LineToken) -> Self {
         if let LineToken::OrderedList(_) = token {
-            Self {
-                lists: vec![token],
-            }
+            Self { lists: vec![token] }
         } else {
             panic!()
         }
@@ -54,20 +52,23 @@ impl OrderedListBlock {
     pub fn push(&mut self, token: LineToken) {
         match token {
             LineToken::OrderedList(_) => self.lists.push(token),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct UnorderedListBlock {
+    pub symbol: char,
     pub lists: Vec<LineToken>,
 }
 
 impl UnorderedListBlock {
     pub fn new(token: LineToken) -> Self {
-        if let LineToken::UnorderedList(_) = token {
+        if let LineToken::UnorderedList(ref t) = token {
+            let symbol = t.symbol;
             Self {
+                symbol,
                 lists: vec![token],
             }
         } else {
@@ -75,19 +76,14 @@ impl UnorderedListBlock {
         }
     }
 
-    pub fn get_symbol(&self) -> &char {
-        let first = self.lists.first().unwrap();
-        if let LineToken::UnorderedList(t) = first {
-            &t.symbol
-        } else {
-            panic!()
-        }
+    pub fn get_symbol(&self) -> char {
+        self.symbol
     }
 
     pub fn push(&mut self, token: LineToken) {
         match token {
             LineToken::UnorderedList(_) => self.lists.push(token),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
@@ -99,23 +95,21 @@ pub struct OrderedList {
 
 impl OrderedList {
     pub fn new(inline_tokens: Vec<InlineToken>) -> Self {
-        Self {
-            inline_tokens,
-        }
+        Self { inline_tokens }
     }
 }
 
 #[derive(Debug)]
 pub struct UnorderedList {
     pub inline_tokens: Vec<InlineToken>,
-    pub symbol: char
+    pub symbol: char,
 }
 
 impl UnorderedList {
     pub fn new(symbol: char, inline_tokens: Vec<InlineToken>) -> Self {
         Self {
             symbol,
-            inline_tokens
+            inline_tokens,
         }
     }
 }
@@ -125,6 +119,14 @@ pub mod tests {
     use super::super::inline_token::tests::{assert_special_token_group, assert_text_token};
     use super::*;
     use crate::Tokenizer;
+
+    pub fn assert_unordered_block_symbol(token: &LineToken, symbol: char) {
+        if let LineToken::UnorderedListBlock(token) = token {
+            assert_eq!(token.get_symbol(), symbol);
+        } else {
+            panic!();
+        }
+    }
 
     #[test]
     fn test_line_scanner_header_token() {
@@ -439,6 +441,15 @@ pub mod tests {
         } else {
             panic!();
         }
+    }
+
+    #[test]
+    fn test_two_different_symbol_unordered_list() {
+        let text = "- first\n* second";
+        let result = Tokenizer::scanner(text);
+        assert_eq!(result.len(), 2);
+        assert_unordered_block_symbol(&result[0], '-');
+        assert_unordered_block_symbol(&result[1], '*');
     }
 
     #[test]
