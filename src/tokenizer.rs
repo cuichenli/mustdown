@@ -274,8 +274,8 @@ impl Tokenizer {
                 if Tokenizer::same_list_block_as_prev(&token, &result) {
                     let last = result.last_mut().unwrap();
                     match last {
-                        LineToken::OrderedListBlock(t) => t.ordered_lists.push(token),
-                        LineToken::UnorderedListBlock(t) => t.unordered_lists.push(token),
+                        LineToken::OrderedListBlock(t) => t.lists.push(token),
+                        LineToken::UnorderedListBlock(t) => t.lists.push(token),
                         _ => panic!(),
                     }
                 } else {
@@ -352,11 +352,11 @@ mod tests {
     #[test]
     fn test_is_prev_list() {
         let tokens = vec![LineToken::OrderedListBlock(OrderedListBlock {
-            ordered_lists: vec![],
+            lists: vec![],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), ORDERED_LIST);
         let tokens = vec![LineToken::UnorderedListBlock(UnorderedListBlock {
-            unordered_lists: vec![],
+            lists: vec![],
         })];
         assert_eq!(Tokenizer::is_prev_list(&tokens), UNORDERED_LIST);
         let tokens = vec![LineToken::Paragraph(Paragraph {

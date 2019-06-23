@@ -37,26 +37,26 @@ pub struct Quote {
 
 #[derive(Debug)]
 pub struct OrderedListBlock {
-    pub ordered_lists: Vec<LineToken>,
+    pub lists: Vec<LineToken>,
 }
 
 impl OrderedListBlock {
     pub fn new(token: LineToken) -> Self {
         Self {
-            ordered_lists: vec![token],
+            lists: vec![token],
         }
     }
 }
 
 #[derive(Debug)]
 pub struct UnorderedListBlock {
-    pub unordered_lists: Vec<LineToken>,
+    pub lists: Vec<LineToken>,
 }
 
 impl UnorderedListBlock {
     pub fn new(token: LineToken) -> Self {
         Self {
-            unordered_lists: vec![token],
+            lists: vec![token],
         }
     }
 }
@@ -318,7 +318,7 @@ pub mod tests {
         let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::OrderedListBlock(token) = &result[0] {
-            let list = &token.ordered_lists;
+            let list = &token.lists;
             assert_eq!(list.len(), 4);
             if let LineToken::OrderedList(token) = &list[0] {
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
@@ -367,7 +367,7 @@ pub mod tests {
         let result = Tokenizer::scanner(text);
         assert_eq!(result.len(), 1);
         if let LineToken::UnorderedListBlock(token) = &result[0] {
-            let list = &token.unordered_lists;
+            let list = &token.lists;
             assert_eq!(list.len(), 4);
             if let LineToken::UnorderedList(token) = &list[0] {
                 if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
@@ -428,7 +428,7 @@ pub mod tests {
         }
 
         if let LineToken::UnorderedListBlock(token) = &result[1] {
-            let tokens = &token.unordered_lists;
+            let tokens = &token.lists;
             assert_eq!(tokens.len(), 2);
             if let LineToken::UnorderedList(token) = &tokens[0] {
                 let list = &token.inline_tokens;
@@ -487,7 +487,7 @@ pub mod tests {
         }
 
         if let LineToken::OrderedListBlock(token) = &result[1] {
-            let tokens = &token.ordered_lists;
+            let tokens = &token.lists;
             assert_eq!(tokens.len(), 2);
             if let LineToken::OrderedList(token) = &tokens[0] {
                 let list = &token.inline_tokens;

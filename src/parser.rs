@@ -104,14 +104,14 @@ impl Parser {
             }
             LineToken::UnorderedListBlock(token) => {
                 result.push_str("<ul>");
-                for t in &token.unordered_lists {
+                for t in &token.lists {
                     result.push_str(&Parser::line_parse(t));
                 }
                 result.push_str("</ul>")
             }
             LineToken::OrderedListBlock(token) => {
                 result.push_str("<ol>");
-                for t in &token.ordered_lists {
+                for t in &token.lists {
                     result.push_str(&Parser::line_parse(t));
                 }
                 result.push_str("</ol>")
@@ -385,7 +385,7 @@ mod test {
     #[test]
     fn test_ordered_list() {
         let token = OrderedListBlock {
-            ordered_lists: vec![
+            lists: vec![
                 LineToken::OrderedList(OrderedList {
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("first"),
@@ -405,7 +405,7 @@ mod test {
     #[test]
     fn test_unordered_list() {
         let token = UnorderedListBlock {
-            unordered_lists: vec![
+            lists: vec![
                 LineToken::UnorderedList(UnorderedList {
                     symbol: '*',
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
