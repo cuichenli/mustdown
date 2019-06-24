@@ -89,13 +89,13 @@ impl Tokenizer {
         tokens.push(token);
     }
 
-    pub fn block_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+    pub fn block_parser(lines: &Vec<&str>) -> LineToken {
         let text = lines.join("\n");
         let block = CodeBlock::new(text);
-        tokens.push(LineToken::CodeBlock(block));
+        LineToken::CodeBlock(block)
     }
 
-    pub fn quote_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+    pub fn quote_parser(lines: &Vec<&str>) -> LineToken {
         let mut inline_tokens: Vec<InlineToken> = Vec::new();
         for l in lines {
             inline_tokens.append(&mut Tokenizer::inline_scanner(l));
@@ -103,7 +103,7 @@ impl Tokenizer {
         }
         inline_tokens.pop();
         let token = Quote { inline_tokens };
-        tokens.push(LineToken::Quote(token));
+        LineToken::Quote(token)
     }
 
     pub fn try_image_token(text: &str) -> Option<ImageToken> {
@@ -255,8 +255,8 @@ impl Tokenizer {
                     block.push(lines[i]);
                     i += 1;
                 }
-                // result should not be passed in to this function
-                Tokenizer::block_parser(&block, &mut result);
+                let token = Tokenizer::block_parser(&block);
+                result.push(token);
             } else if line[0..1] == *">" {
                 let mut temp = vec![&lines[i][1..]];
                 i += 1;
@@ -269,7 +269,8 @@ impl Tokenizer {
                 } else {
                     i -= 1;
                 }
-                Tokenizer::quote_parser(&temp, &mut result);
+                let token = Tokenizer::quote_parser(&temp);
+                result.push(token);
             } else if let Some(token) = Tokenizer::is_list(line) {
                 if Tokenizer::same_list_block_as_prev(&token, &result) {
                     let last = result.last_mut().unwrap();
