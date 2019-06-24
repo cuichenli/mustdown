@@ -60,50 +60,16 @@ impl Tokenizer {
         return false;
     }
 
-    pub fn line_scanner(line: &str, tokens: &mut Vec<LineToken>) {
-        let chars = line.as_bytes();
-        let mut inner_text = line;
-        match chars[0] as char {
-            '#' => {
-                let re = Regex::new(r"^(#{1,6}) (.*)").unwrap();
-                let caps = re.captures(line);
-                match caps {
-                    Some(v) => {
-                        let level = v.get(1).unwrap().as_str().len();
-                        inner_text = v.get(2).unwrap().as_str();
-
-                        let token = HeaderToken {
-                            level,
-                            inline_tokens: Tokenizer::inline_scanner(inner_text),
-                        };
-                        tokens.push(LineToken::HeaderToken(token));
-                    }
-                    None => (),
-                }
-            }
-            _ => (),
-        }
-        let token = LineToken::Paragraph(Paragraph {
-            inline_tokens: Tokenizer::inline_scanner(inner_text),
-        });
-        tokens.push(token);
+    pub fn line_scanner(line: &str) -> LineToken {
+        LineToken::Paragraph(Paragraph {
+            inline_tokens: Tokenizer::inline_scanner(line),
+        })
     }
 
-    pub fn block_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
+    pub fn block_parser(lines: &Vec<&str>) -> LineToken {
         let text = lines.join("\n");
         let block = CodeBlock::new(text);
-        tokens.push(LineToken::CodeBlock(block));
-    }
-
-    pub fn quote_parser(lines: &Vec<&str>, tokens: &mut Vec<LineToken>) {
-        let mut inline_tokens: Vec<InlineToken> = Vec::new();
-        for l in lines {
-            inline_tokens.append(&mut Tokenizer::inline_scanner(l));
-            inline_tokens.push(InlineToken::BreakToken);
-        }
-        inline_tokens.pop();
-        let token = Quote { inline_tokens };
-        tokens.push(LineToken::Quote(token));
+        LineToken::CodeBlock(block)
     }
 
     pub fn try_image_token(text: &str) -> Option<ImageToken> {
@@ -237,6 +203,75 @@ impl Tokenizer {
         tokens
     }
 
+    pub fn code_block_parser(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        index = index + 1;
+        let mut block: Vec<&str> = Vec::new();
+        while index < lines.len() && lines[index] != "```" {
+            block.push(lines[index]);
+            index += 1;
+        }
+        let token = Tokenizer::block_parser(&block);
+        (token, index)
+    }
+
+    pub fn quote_block_parser(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        let mut temp = vec![&lines[index][1..]];
+        index += 1;
+        while index < lines.len() && lines[index].ends_with("  ") {
+            temp.push(lines[index]);
+            index += 1;
+        }
+        if index < lines.len() && lines[index - 1].ends_with("  ") {
+            temp.push(lines[index]);
+        } else {
+            index -= 1;
+        };
+        let mut inline_tokens: Vec<InlineToken> = Vec::new();
+        for l in temp {
+            inline_tokens.append(&mut Tokenizer::inline_scanner(l));
+            inline_tokens.push(InlineToken::BreakToken);
+        }
+        inline_tokens.pop();
+        let token = Quote { inline_tokens };
+        (LineToken::Quote(token), index)
+    }
+
+    pub fn push_to_last_list_block(tokens: &mut Vec<LineToken>, token: LineToken) {
+        let last = tokens.last_mut().unwrap();
+        match last {
+            LineToken::OrderedListBlock(t) => t.push(token),
+            LineToken::UnorderedListBlock(t) => t.push(token),
+            _ => panic!(),
+        }
+    }
+
+    pub fn new_list_block(token: LineToken) -> LineToken {
+        match token {
+            LineToken::UnorderedList(_) => {
+                LineToken::UnorderedListBlock(UnorderedListBlock::new(token))
+            }
+            LineToken::OrderedList(_) => LineToken::OrderedListBlock(OrderedListBlock::new(token)),
+            _ => panic!(),
+        }
+    }
+
+    pub fn is_header(line: &str) -> Option<LineToken> {
+        let re = Regex::new(r"^(#{1,6}) (.*)").unwrap();
+        let caps = re.captures(line);
+        match caps {
+            Some(v) => {
+                let level = v.get(1).unwrap().as_str().len();
+                let inner_text = v.get(2).unwrap().as_str();
+                let token = HeaderToken {
+                    level,
+                    inline_tokens: Tokenizer::inline_scanner(inner_text),
+                };
+                Some(LineToken::HeaderToken(token))
+            }
+            None => None,
+        }
+    }
+
     pub fn scanner(text: &str) -> Vec<LineToken> {
         let mut result: Vec<LineToken> = Vec::new();
         let lines = text.split("\n");
@@ -249,48 +284,25 @@ impl Tokenizer {
                 continue;
             }
             if line == "```" {
-                let mut block: Vec<&str> = Vec::new();
-                i += 1;
-                while i < lines.len() && lines[i] != "```" {
-                    block.push(lines[i]);
-                    i += 1;
-                }
-                // result should not be passed in to this function
-                Tokenizer::block_parser(&block, &mut result);
+                let (token, temp) = Tokenizer::code_block_parser(&lines, i);
+                i = temp;
+                result.push(token);
             } else if line[0..1] == *">" {
-                let mut temp = vec![&lines[i][1..]];
-                i += 1;
-                while i < lines.len() && lines[i].ends_with("  ") {
-                    temp.push(lines[i]);
-                    i += 1;
-                }
-                if i < lines.len() && lines[i - 1].ends_with("  ") {
-                    temp.push(lines[i]);
-                } else {
-                    i -= 1;
-                }
-                Tokenizer::quote_parser(&temp, &mut result);
+                let (token, index) = Tokenizer::quote_block_parser(&lines, i);
+                i = index;
+                result.push(token);
             } else if let Some(token) = Tokenizer::is_list(line) {
                 if Tokenizer::same_list_block_as_prev(&token, &result) {
-                    let last = result.last_mut().unwrap();
-                    match last {
-                        LineToken::OrderedListBlock(t) => t.push(token),
-                        LineToken::UnorderedListBlock(t) => t.push(token),
-                        _ => panic!(),
-                    }
+                    Tokenizer::push_to_last_list_block(&mut result, token);
                 } else {
-                    match token {
-                        LineToken::UnorderedList(_) => result.push(LineToken::UnorderedListBlock(
-                            UnorderedListBlock::new(token),
-                        )),
-                        LineToken::OrderedList(_) => {
-                            result.push(LineToken::OrderedListBlock(OrderedListBlock::new(token)))
-                        }
-                        _ => panic!(),
-                    }
+                    let token = Tokenizer::new_list_block(token);
+                    result.push(token);
                 }
+            } else if let Some(token) = Tokenizer::is_header(line) {
+                result.push(token);
             } else {
-                Tokenizer::line_scanner(&line, &mut result);
+                let token = Tokenizer::line_scanner(line);
+                result.push(token);
             }
             i += 1;
         }

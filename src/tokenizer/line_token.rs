@@ -153,7 +153,8 @@ pub mod tests {
         let lines = vec!["this", "is", "a", "test"];
         // let tokenizer = Tokenizer::scanner("");
         let mut tokens: Vec<LineToken> = Vec::new();
-        Tokenizer::block_parser(&lines, &mut tokens);
+        let token = Tokenizer::block_parser(&lines);
+        tokens.push(token);
         assert_eq!(tokens.len(), 1);
         let token = tokens.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
