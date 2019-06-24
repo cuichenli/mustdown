@@ -237,6 +237,17 @@ impl Tokenizer {
         tokens
     }
 
+    pub fn code_block_parser(lines: &Vec<&str>, index: usize) -> (LineToken, usize) {
+        let mut index = index + 1;
+        let mut block: Vec<&str> = Vec::new();
+        while index < lines.len() && lines[index] != "```" {
+            block.push(lines[index]);
+            index += 1;
+        }
+        let token = Tokenizer::block_parser(&block);
+        (token, index)
+    }
+
     pub fn scanner(text: &str) -> Vec<LineToken> {
         let mut result: Vec<LineToken> = Vec::new();
         let lines = text.split("\n");
@@ -249,13 +260,8 @@ impl Tokenizer {
                 continue;
             }
             if line == "```" {
-                let mut block: Vec<&str> = Vec::new();
-                i += 1;
-                while i < lines.len() && lines[i] != "```" {
-                    block.push(lines[i]);
-                    i += 1;
-                }
-                let token = Tokenizer::block_parser(&block);
+                let (token, temp) = Tokenizer::code_block_parser(&lines, i);
+                i = temp;
                 result.push(token);
             } else if line[0..1] == *">" {
                 let mut temp = vec![&lines[i][1..]];
