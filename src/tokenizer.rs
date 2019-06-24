@@ -220,7 +220,7 @@ impl Tokenizer {
         while index < lines.len() && lines[index].ends_with("  ") {
             temp.push(lines[index]);
             index += 1;
-        };
+        }
         if index < lines.len() && lines[index - 1].ends_with("  ") {
             temp.push(lines[index]);
         } else {
@@ -247,12 +247,10 @@ impl Tokenizer {
 
     pub fn new_list_block(token: LineToken) -> LineToken {
         match token {
-            LineToken::UnorderedList(_) => LineToken::UnorderedListBlock(
-                UnorderedListBlock::new(token),
-            ),
-            LineToken::OrderedList(_) => {
-                LineToken::OrderedListBlock(OrderedListBlock::new(token))
+            LineToken::UnorderedList(_) => {
+                LineToken::UnorderedListBlock(UnorderedListBlock::new(token))
             }
+            LineToken::OrderedList(_) => LineToken::OrderedListBlock(OrderedListBlock::new(token)),
             _ => panic!(),
         }
     }
@@ -270,7 +268,7 @@ impl Tokenizer {
                 };
                 Some(LineToken::HeaderToken(token))
             }
-            None => None
+            None => None,
         }
     }
 
