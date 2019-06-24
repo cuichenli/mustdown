@@ -95,17 +95,6 @@ impl Tokenizer {
         LineToken::CodeBlock(block)
     }
 
-    pub fn quote_parser(lines: &Vec<&str>) -> LineToken {
-        let mut inline_tokens: Vec<InlineToken> = Vec::new();
-        for l in lines {
-            inline_tokens.append(&mut Tokenizer::inline_scanner(l));
-            inline_tokens.push(InlineToken::BreakToken);
-        }
-        inline_tokens.pop();
-        let token = Quote { inline_tokens };
-        LineToken::Quote(token)
-    }
-
     pub fn try_image_token(text: &str) -> Option<ImageToken> {
         let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
@@ -237,8 +226,8 @@ impl Tokenizer {
         tokens
     }
 
-    pub fn code_block_parser(lines: &Vec<&str>, index: usize) -> (LineToken, usize) {
-        let mut index = index + 1;
+    pub fn code_block_parser(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        index = index + 1;
         let mut block: Vec<&str> = Vec::new();
         while index < lines.len() && lines[index] != "```" {
             block.push(lines[index]);
@@ -246,6 +235,28 @@ impl Tokenizer {
         }
         let token = Tokenizer::block_parser(&block);
         (token, index)
+    }
+
+    pub fn quote_block_parser(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        let mut temp = vec![&lines[index][1..]];
+        index += 1;
+        while index < lines.len() && lines[index].ends_with("  ") {
+            temp.push(lines[index]);
+            index += 1;
+        };
+        if index < lines.len() && lines[index - 1].ends_with("  ") {
+            temp.push(lines[index]);
+        } else {
+            index -= 1;
+        };
+        let mut inline_tokens: Vec<InlineToken> = Vec::new();
+        for l in temp {
+            inline_tokens.append(&mut Tokenizer::inline_scanner(l));
+            inline_tokens.push(InlineToken::BreakToken);
+        }
+        inline_tokens.pop();
+        let token = Quote { inline_tokens };
+        (LineToken::Quote(token), index)
     }
 
     pub fn scanner(text: &str) -> Vec<LineToken> {
@@ -264,18 +275,8 @@ impl Tokenizer {
                 i = temp;
                 result.push(token);
             } else if line[0..1] == *">" {
-                let mut temp = vec![&lines[i][1..]];
-                i += 1;
-                while i < lines.len() && lines[i].ends_with("  ") {
-                    temp.push(lines[i]);
-                    i += 1;
-                }
-                if i < lines.len() && lines[i - 1].ends_with("  ") {
-                    temp.push(lines[i]);
-                } else {
-                    i -= 1;
-                }
-                let token = Tokenizer::quote_parser(&temp);
+                let (token, index) = Tokenizer::quote_block_parser(&lines, i);
+                i = index;
                 result.push(token);
             } else if let Some(token) = Tokenizer::is_list(line) {
                 if Tokenizer::same_list_block_as_prev(&token, &result) {
