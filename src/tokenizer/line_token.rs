@@ -1,4 +1,7 @@
 use super::inline_token::InlineToken;
+extern crate regex;
+use regex::Regex;
+
 #[derive(Debug)]
 pub enum LineToken {
     HeaderToken(HeaderToken),
@@ -11,15 +14,108 @@ pub enum LineToken {
     UnorderedList(UnorderedList),
 }
 
+const ORDERED_LIST: char = '1';
+const NOT_LIST: char = 'a';
+
+impl LineToken {
+    pub fn new_list_block(token: LineToken) -> LineToken {
+        match token {
+            LineToken::UnorderedList(_) => {
+                LineToken::UnorderedListBlock(UnorderedListBlock::new(token))
+            }
+            LineToken::OrderedList(_) => LineToken::OrderedListBlock(OrderedListBlock::new(token)),
+            _ => panic!(),
+        }
+    }
+
+    pub fn is_list(line: &str) -> Option<LineToken> {
+        let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
+        let caps = re.captures(line);
+        if let Some(mat) = caps {
+            let left_text = mat.get(mat.len() - 1).unwrap().as_str();
+            let inline_tokens = InlineToken::tokenizer(left_text);
+            if let Some(_) = mat.name("ordered") {
+                let token = OrderedList::new(inline_tokens);
+                Some(LineToken::OrderedList(token))
+            } else {
+                let symbol = line.chars().next().unwrap();
+                let token = UnorderedList::new(symbol, inline_tokens);
+                Some(LineToken::UnorderedList(token))
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn is_prev_list(tokens: &Vec<LineToken>) -> char {
+        let last = &tokens.last();
+        if let Some(LineToken::UnorderedListBlock(t)) = last {
+            t.get_symbol()
+        } else if let Some(LineToken::OrderedListBlock(_)) = last {
+            ORDERED_LIST
+        } else {
+            NOT_LIST
+        }
+    }
+
+    pub fn same_list_block_as_prev(token: &LineToken, tokens: &Vec<LineToken>) -> bool {
+        let prev = LineToken::is_prev_list(tokens);
+        if let LineToken::UnorderedList(t) = token {
+            return t.symbol == prev;
+        } else if let LineToken::OrderedList(_) = token {
+            return prev == ORDERED_LIST;
+        }
+        return false;
+    }
+
+    pub fn push_to_last_list_block(tokens: &mut Vec<LineToken>, token: LineToken) {
+        let last = tokens.last_mut().unwrap();
+        match last {
+            LineToken::OrderedListBlock(t) => t.push(token),
+            LineToken::UnorderedListBlock(t) => t.push(token),
+            _ => panic!(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct HeaderToken {
     pub level: usize,
     pub inline_tokens: Vec<InlineToken>,
 }
+
+impl HeaderToken {
+    pub fn try_tokenize(line: &str) -> Option<LineToken> {
+        let re = Regex::new(r"^(#{1,6}) (.*)").unwrap();
+        let caps = re.captures(line);
+        match caps {
+            Some(v) => {
+                let level = v.get(1).unwrap().as_str().len();
+                let inner_text = v.get(2).unwrap().as_str();
+                let token = HeaderToken {
+                    level,
+                    inline_tokens: InlineToken::tokenizer(inner_text),
+                };
+                Some(LineToken::HeaderToken(token))
+            }
+            None => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Paragraph {
     pub inline_tokens: Vec<InlineToken>,
 }
+
+impl Paragraph {
+    pub fn tokenizer(line: &str) -> LineToken {
+        LineToken::Paragraph(Paragraph {
+            inline_tokens: InlineToken::tokenizer(line),
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct CodeBlock {
     pub text: String,
@@ -29,10 +125,47 @@ impl CodeBlock {
     pub fn new(text: String) -> Self {
         Self { text }
     }
+
+    pub fn tokenizer(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        index = index + 1;
+        let mut block: Vec<&str> = Vec::new();
+        while index < lines.len() && lines[index] != "```" {
+            block.push(lines[index]);
+            index += 1;
+        }
+        let text = block.join("\n");
+        let block = CodeBlock::new(text);
+        let token = LineToken::CodeBlock(block);
+        (token, index)
+    }
 }
 #[derive(Debug)]
 pub struct Quote {
     pub inline_tokens: Vec<InlineToken>,
+}
+
+impl Quote {
+    pub fn tokenizer(lines: &Vec<&str>, mut index: usize) -> (LineToken, usize) {
+        let mut temp = vec![&lines[index][1..]];
+        index += 1;
+        while index < lines.len() && lines[index].ends_with("  ") {
+            temp.push(lines[index]);
+            index += 1;
+        }
+        if index < lines.len() && lines[index - 1].ends_with("  ") {
+            temp.push(lines[index]);
+        } else {
+            index -= 1;
+        };
+        let mut inline_tokens: Vec<InlineToken> = Vec::new();
+        for l in temp {
+            inline_tokens.append(&mut InlineToken::tokenizer(l));
+            inline_tokens.push(InlineToken::BreakToken);
+        }
+        inline_tokens.pop();
+        let token = Quote { inline_tokens };
+        (LineToken::Quote(token), index)
+    }
 }
 
 #[derive(Debug)]
@@ -127,10 +260,92 @@ pub mod tests {
             panic!();
         }
     }
+    #[test]
+    fn test_is_list() {
+        let l = "- this";
+        LineToken::is_list(l).unwrap();
+        let result = LineToken::is_list("1. this");
+        if result.is_none() {
+            panic!();
+        }
+        let result = LineToken::is_list("* this");
+        if result.is_none() {
+            panic!();
+        }
+        let result = LineToken::is_list("2. this");
+        if result.is_none() {
+            panic!();
+        }
+        let result = LineToken::is_list("23. this");
+        if result.is_none() {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_is_list_should_panic() {
+        let l = "-this";
+        if LineToken::is_list(l).is_some() {
+            panic!();
+        }
+        if LineToken::is_list("1.this").is_some() {
+            panic!();
+        }
+        if LineToken::is_list("*dafsa").is_some() {
+            panic!();
+        }
+        if LineToken::is_list("-").is_some() {
+            panic!();
+        }
+        if LineToken::is_list("- ").is_some() {
+            panic!();
+        }
+        if LineToken::is_list("1. ").is_some() {
+            panic!();
+        }
+        if LineToken::is_list("* ").is_some() {
+            panic!();
+        }
+    }
+
+    #[test]
+    fn test_is_prev_list() {
+        let tokens = vec![LineToken::OrderedListBlock(OrderedListBlock {
+            lists: vec![],
+        })];
+        assert_eq!(LineToken::is_prev_list(&tokens), ORDERED_LIST);
+        let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
+        let tokens = vec![LineToken::UnorderedListBlock(UnorderedListBlock {
+            symbol: '*',
+            lists: vec![unordered_list],
+        })];
+        assert_eq!(LineToken::is_prev_list(&tokens), '*');
+        let tokens = vec![LineToken::Paragraph(Paragraph {
+            inline_tokens: vec![],
+        })];
+        assert_eq!(LineToken::is_prev_list(&tokens), NOT_LIST);
+        let tokens = vec![];
+        assert_eq!(LineToken::is_prev_list(&tokens), NOT_LIST);
+    }
+
+    #[test]
+    fn test_is_prev_same_block() {
+        let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
+        let block = &vec![LineToken::UnorderedListBlock(UnorderedListBlock::new(
+            unordered_list,
+        ))];
+        let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
+        assert!(LineToken::same_list_block_as_prev(&unordered_list, block));
+        let unordered_list = LineToken::UnorderedList(UnorderedList::new('-', vec![]));
+        assert_eq!(
+            false,
+            LineToken::same_list_block_as_prev(&unordered_list, block)
+        );
+    }
 
     #[test]
     fn test_line_scanner_header_token() {
-        let result = Tokenizer::scanner("## Test");
+        let result = Tokenizer::tokenizer("## Test");
         let head_token = &result[0];
         let level: usize;
         let inline_token: &Vec<InlineToken>;
@@ -149,27 +364,11 @@ pub mod tests {
     }
 
     #[test]
-    fn test_block_parser() {
-        let lines = vec!["this", "is", "a", "test"];
-        // let tokenizer = Tokenizer::scanner("");
-        let mut tokens: Vec<LineToken> = Vec::new();
-        let token = Tokenizer::block_parser(&lines);
-        tokens.push(token);
-        assert_eq!(tokens.len(), 1);
-        let token = tokens.first().unwrap();
-        if let LineToken::CodeBlock(token) = token {
-            assert_eq!(token.text, "this\nis\na\ntest");
-        } else {
-            panic!();
-        }
-    }
-
-    #[test]
     fn test_scanner_with_code_block() {
         let text = "```\n\
                     this is a test \n\
                     ```";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         let token = result.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
@@ -185,7 +384,7 @@ pub mod tests {
                     this is a test \n\
                     ```\n\
                     this is another test";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 2);
         let token = result.first().unwrap();
         if let LineToken::CodeBlock(token) = token {
@@ -208,7 +407,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_multiple_lines() {
         let text = ">this is  \na quote";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -236,7 +435,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_single_line() {
         let text = ">this is\n";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -254,7 +453,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_inline_tokens_with_single_line() {
         let text = ">this is*a bold*\n";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
@@ -269,7 +468,7 @@ pub mod tests {
     #[test]
     fn test_single_line_quote_with_lines_surrounding() {
         let text = "first paragraph\n>a quote\nsecond paragraph";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 1);
@@ -299,7 +498,7 @@ pub mod tests {
     #[test]
     fn test_multiple_lines_quote_with_lines_surrounding() {
         let text = "first paragraph\n>a quote  \nanother quote\nsecond paragraph";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 3);
@@ -337,7 +536,7 @@ pub mod tests {
     #[test]
     fn test_quote_with_empty_quote() {
         let text = ">";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::Quote(token) = &result[0] {
             assert_eq!(token.inline_tokens.len(), 0);
@@ -349,7 +548,7 @@ pub mod tests {
     #[test]
     fn test_ordered_list() {
         let text = "1. this\n2. is\n3. a\n4. test";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::OrderedListBlock(token) = &result[0] {
             let list = &token.lists;
@@ -398,7 +597,7 @@ pub mod tests {
     #[test]
     fn test_unordered_list() {
         let text = "- this\n- is\n- a\n- test";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         if let LineToken::UnorderedListBlock(token) = &result[0] {
             let list = &token.lists;
@@ -447,7 +646,7 @@ pub mod tests {
     #[test]
     fn test_two_different_symbol_unordered_list() {
         let text = "- first\n* second";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 2);
         assert_unordered_block_symbol(&result[0], '-');
         assert_unordered_block_symbol(&result[1], '*');
@@ -456,7 +655,7 @@ pub mod tests {
     #[test]
     fn test_unordered_list_with_lines_surrounded() {
         let text = "a simple line\n- a list\n- another\ntest";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Paragraph(token) = &result[0] {
             let tokens = &token.inline_tokens;
@@ -515,7 +714,7 @@ pub mod tests {
     #[test]
     fn test_ordered_list_with_lines_surrounded() {
         let text = "a simple line\n1. a list\n2. another\ntest";
-        let result = Tokenizer::scanner(text);
+        let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
         if let LineToken::Paragraph(token) = &result[0] {
             let tokens = &token.inline_tokens;
