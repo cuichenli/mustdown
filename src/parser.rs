@@ -298,6 +298,7 @@ mod test {
         let image_token = ImageToken {
             link: String::from("link"),
             alt: String::from("alt"),
+            need_note: false,
         };
         let token = InlineToken::ImageToken(image_token);
         let result = Parser::inline_parse(&token);
@@ -309,6 +310,7 @@ mod test {
         let link_token = LinkToken {
             link: String::from("link"),
             alt: String::from("alt"),
+            need_note: false,
         };
         let token = InlineToken::LinkToken(link_token);
         let result = Parser::inline_parse(&token);
