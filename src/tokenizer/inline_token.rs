@@ -182,23 +182,45 @@ impl DoubleSpecialToken {
 pub struct LinkToken {
     pub alt: String,
     pub link: String,
+    pub need_note: bool,
 }
 
 impl LinkToken {
-    pub fn new(alt: String, link: String) -> Self {
-        Self { alt, link }
+    pub fn new(alt: String, link: String, need_note: bool) -> Self {
+        Self { alt, link, need_note }
     }
 
     pub fn len(&self) -> usize {
         self.alt.len() + self.link.len() + 4
     }
 
-    pub fn try_tokenize(text: &str) -> Option<LinkToken> {
+    pub fn try_tokenize_with_real_link(text: &str) -> Option<LinkToken> {
         let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
-            Some(LinkToken::new(alt, link))
+            Some(LinkToken::new(alt, link, false))
+        } else {
+            None
+        }
+    }
+
+    pub fn try_tokenize_with_need_note(text: &str) -> Option<LinkToken> {
+        let re = Regex::new(r"\[(.*)\]\[(.*)\]").unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let (alt, link) = InlineToken::get_alt_and_link(&mat);
+            Some(LinkToken::new(alt, link, true))
+        } else {
+            None
+        }
+    }
+
+    pub fn try_tokenize(text: &str) -> Option<LinkToken> {
+        if let Some(token) = LinkToken::try_tokenize_with_real_link(text) {
+            Some(token)
+        } else if let Some(token) = LinkToken::try_tokenize_with_need_note(text) {
+            Some(token)
         } else {
             None
         }
@@ -209,25 +231,46 @@ impl LinkToken {
 pub struct ImageToken {
     pub alt: String,
     pub link: String,
+    pub need_note: bool,
 }
 
 impl ImageToken {
-    pub fn new(alt: String, link: String) -> Self {
-        Self { alt, link }
+    pub fn new(alt: String, link: String, need_note: bool) -> Self {
+        Self { alt, link, need_note }
     }
 
     pub fn len(&self) -> usize {
         self.alt.len() + self.link.len() + 5
     }
 
-    pub fn try_tokenize(text: &str) -> Option<ImageToken> {
+    pub fn try_tokenize_with_real_link(text: &str) -> Option<ImageToken> {
         let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
-            return Some(ImageToken::new(alt, link));
+            return Some(ImageToken::new(alt, link, false));
         }
         None
+    }
+
+    pub fn try_tokenize_with_need_note(text: &str) -> Option<ImageToken> {
+        let re = Regex::new(r"!\[(.*)\]\[(.*)\]").unwrap();
+        let caps = re.captures(text);
+        if let Some(mat) = caps {
+            let (alt, link) = InlineToken::get_alt_and_link(&mat);
+            return Some(ImageToken::new(alt, link, true));
+        }
+        None
+    }
+
+    pub fn try_tokenize(text: &str) -> Option<ImageToken> {
+        if let Some(token) = ImageToken::try_tokenize_with_real_link(text) {
+            Some(token)
+        } else if let Some(token) = ImageToken::try_tokenize_with_need_note(text) {
+            Some(token)
+        } else {
+            None
+        }
     }
 }
 
@@ -262,6 +305,7 @@ pub mod tests {
             panic!()
         }
     }
+
     pub fn assert_double_special_token_group(token: &InlineToken, text: &str, symbol: char) {
         assert_double_special_token(token, symbol);
         if let InlineToken::DoubleSpecialToken(t) = token {
@@ -415,19 +459,42 @@ pub mod tests {
         assert_special_token(token1, '`');
     }
 
+    pub fn assert_link_token(token: &InlineToken, alt: &str, link: &str, need_note: bool) {
+        match token {
+            InlineToken::LinkToken(token) => {
+                assert_eq!(token.alt, alt);
+                assert_eq!(token.link, link);
+                assert_eq!(token.need_note, need_note);
+            }
+            _ => panic!(),
+        }
+    }
+
+    pub fn assert_image_token(token: &InlineToken, alt: &str, link: &str, need_note: bool) {
+        match token {
+            InlineToken::ImageToken(token) => {
+                assert_eq!(token.alt, alt);
+                assert_eq!(token.link, link);
+                assert_eq!(token.need_note, need_note);
+            }
+            _ => panic!(),
+        }
+    }
+
     #[test]
     fn test_link_token() {
         let text = "[Link](http://a.com)";
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 1);
-        let token = &result[0];
-        match token {
-            InlineToken::LinkToken(token) => {
-                assert_eq!(token.alt, "Link");
-                assert_eq!(token.link, "http://a.com");
-            }
-            _ => panic!(),
-        };
+        assert_link_token(&result[0], "Link", "http://a.com", false);
+    }
+
+    #[test]
+    fn test_link_with_need_note() {
+        let text = "[Link][1]";
+        let result = InlineToken::tokenizer(text);
+        assert_eq!(result.len(), 1);
+        assert_link_token(&result[0], "Link", "1", true);
     }
 
     #[test]
@@ -459,14 +526,31 @@ pub mod tests {
         let text = "![Link](http://a.com)";
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 1);
-        let token = &result[0];
-        match token {
-            InlineToken::ImageToken(token) => {
-                assert_eq!(token.alt, "Link");
-                assert_eq!(token.link, "http://a.com");
-            }
-            _ => panic!(),
-        };
+        assert_image_token(&result[0], "Link", "http://a.com", false);
+        // let token = &result[0];
+        // match token {
+        //     InlineToken::ImageToken(token) => {
+        //         assert_eq!(token.alt, "Link");
+        //         assert_eq!(token.link, "http://a.com");
+        //     }
+        //     _ => panic!(),
+        // };
+    }
+
+    #[test]
+    fn test_image_token_with_need_note() {
+        let text = "![Link][1]";
+        let result = InlineToken::tokenizer(text);
+        assert_eq!(result.len(), 1);
+        assert_image_token(&result[0], "Link", "1", true);
+        // let token = &result[0];
+        // match token {
+        //     InlineToken::ImageToken(token) => {
+        //         assert_eq!(token.alt, "Link");
+        //         assert_eq!(token.link, "http://a.com");
+        //     }
+        //     _ => panic!(),
+        // };
     }
 
     #[test]
