@@ -12,6 +12,7 @@ pub enum LineToken {
     UnorderedListBlock(UnorderedListBlock),
     OrderedList(OrderedList),
     UnorderedList(UnorderedList),
+    NoteToken(NoteToken)
 }
 
 const ORDERED_LIST: char = '1';
@@ -243,6 +244,29 @@ impl UnorderedList {
         Self {
             symbol,
             inline_tokens,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct NoteToken {
+    pub name: String,
+    pub link: String,
+}
+
+impl NoteToken {
+
+    pub fn new(name: String, link: String) -> Self {
+        Self { name, link }
+    }
+    pub fn try_tokenize(line: &str) -> Option<LineToken> {
+        let re = Regex::new(r"\[(.*)\]:(.*)").unwrap();
+        if let Some(mat) = re.captures(line) {
+            let name = String::from(mat.get(1).unwrap().as_str());
+            let link = String::from(mat.get(2).unwrap().as_str());
+            Some(LineToken::NoteToken(NoteToken::new(name, link)))
+        } else {
+            None
         }
     }
 }
@@ -768,5 +792,34 @@ pub mod tests {
         } else {
             panic!();
         }
+    }
+
+    pub fn assert_note_token(token: &LineToken, name: &str, link: &str) {
+        if let LineToken::NoteToken(token) = token {
+            assert_eq!(token.name, name);
+            assert_eq!(token.link, link);
+        } else {
+            panic!()
+        }
+    }
+
+    #[test]
+    fn test_note_token() {
+        let text = "[1]:http://a.com";
+        let result = NoteToken::try_tokenize(text);
+        match result {
+            Some(token) => {
+                assert_note_token(&token, "1", "http://a.com");
+            }
+            _ => panic!()
+        }
+    }
+
+    #[test]
+    fn test_note_token_in_tokenizer() {
+        let text = "[1]:http://a.com";
+        let result = Tokenizer::tokenizer(text);
+        assert_eq!(result.len(), 1);
+        assert_note_token(&result[0], "1", "http://a.com")
     }
 }

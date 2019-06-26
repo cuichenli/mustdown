@@ -8,7 +8,7 @@ pub use inline_token::{
 };
 pub use line_token::{
     CodeBlock, HeaderToken, LineToken, OrderedList, OrderedListBlock, Paragraph, Quote,
-    UnorderedList, UnorderedListBlock,
+    UnorderedList, UnorderedListBlock, NoteToken
 };
 
 pub struct Tokenizer {}
@@ -41,6 +41,8 @@ impl Tokenizer {
                     result.push(token);
                 }
             } else if let Some(token) = HeaderToken::try_tokenize(line) {
+                result.push(token);
+            } else if let Some(token) = NoteToken::try_tokenize(line) {
                 result.push(token);
             } else {
                 let token = Paragraph::tokenizer(line);
