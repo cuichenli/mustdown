@@ -12,12 +12,22 @@ pub enum LineToken {
     UnorderedListBlock(UnorderedListBlock),
     OrderedList(OrderedList),
     UnorderedList(UnorderedList),
-    NoteToken(NoteToken)
+    NoteToken(NoteToken),
+    HorizontalRule
 }
 
 const NOT_LIST: char = 'a';
 
 impl LineToken {
+    pub fn is_horizontal_rule(line: &str) -> bool {
+        let re = Regex::new("^([-]{3,}|[*]{3,})$").unwrap();
+        if let Some(_) = re.captures(line) {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn new_list_block(token: LineToken) -> LineToken {
         match token {
             LineToken::UnorderedList(_) => {
@@ -904,5 +914,21 @@ pub mod tests {
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
         assert_note_token(&result[0], "1", "http://a.com")
+    }
+
+    #[test]
+    fn test_is_horizontal_rule() {
+        let line = "--";
+        assert_eq!(LineToken::is_horizontal_rule(line), false);
+        let line = "---";
+        assert_eq!(LineToken::is_horizontal_rule(line), true);
+        let line = "-------";
+        assert_eq!(LineToken::is_horizontal_rule(line), true);
+        let line = "**";
+        assert_eq!(LineToken::is_horizontal_rule(line), false);
+        let line = "***";
+        assert_eq!(LineToken::is_horizontal_rule(line), true);
+        let line = "*******";
+        assert_eq!(LineToken::is_horizontal_rule(line), true);
     }
 }

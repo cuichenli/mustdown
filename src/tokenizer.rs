@@ -44,6 +44,8 @@ impl Tokenizer {
                 result.push(token);
             } else if let Some(token) = NoteToken::try_tokenize(line) {
                 result.push(token);
+            } else if LineToken::is_horizontal_rule(line) {
+                result.push(LineToken::HorizontalRule)
             } else {
                 let token = Paragraph::tokenizer(line);
                 result.push(token);

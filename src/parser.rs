@@ -146,6 +146,9 @@ impl Parser  {
                 }
                 result.push_str("</li>")
             }
+            LineToken::HorizontalRule => {
+                result.push_str("<hr>");
+            }
             LineToken::NoteToken(_) => ()
         }
         result
@@ -500,5 +503,13 @@ mod test {
         assert_eq!(parser.notes.len(), 1);
         assert_eq!(parser.notes["link"], "http://a.com");
         assert_eq!(result, "<p>\n<img src=\"http://a.com\" alt=\"alt\"></p>\n");
+    }
+
+    #[test]
+    fn test_horizontal_rule() {
+        let token = LineToken::HorizontalRule;
+        let parser = Parser::new();
+        let result = parser.line_parse(&token);
+        assert_eq!("<hr>", result);
     }
 }
