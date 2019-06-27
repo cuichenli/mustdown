@@ -125,7 +125,8 @@ impl Parser  {
                 result.push_str("</ul>")
             }
             LineToken::OrderedListBlock(token) => {
-                result.push_str("<ol>");
+                let start = token.start;
+                result.push_str(&format!("<ol start=\"{}\">", start));
                 for t in &token.lists {
                     result.push_str(&self.line_parse(t));
                 }
@@ -454,7 +455,7 @@ mod test {
             ],
         };
         let result = parser.line_parse(&LineToken::OrderedListBlock(token));
-        assert_eq!(result, "<ol><li>first</li><li>second</li></ol>");
+        assert_eq!(result, "<ol start=\"1\"><li>first</li><li>second</li></ol>");
     }
 
     #[test]
