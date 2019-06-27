@@ -434,13 +434,19 @@ mod test {
     fn test_ordered_list() {
         let parser = Parser::new();
         let token = OrderedListBlock {
+            start: '1',
+            symbol: ')',
             lists: vec![
                 LineToken::OrderedList(OrderedList {
+                    order: '1',
+                    symbol: ')',
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("first"),
                     })],
                 }),
                 LineToken::OrderedList(OrderedList {
+                    order: '1',
+                    symbol: ')',
                     inline_tokens: vec![InlineToken::TextToken(TextToken {
                         text: String::from("second"),
                     })],

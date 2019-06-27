@@ -15,7 +15,6 @@ pub enum LineToken {
     NoteToken(NoteToken)
 }
 
-const ORDERED_LIST: char = '1';
 const NOT_LIST: char = 'a';
 
 impl LineToken {
@@ -30,13 +29,16 @@ impl LineToken {
     }
 
     pub fn is_list(line: &str) -> Option<LineToken> {
-        let re = Regex::new(r"^((?P<ordered>\d+\. )|(?P<unordered>[-*] ))(.+)").unwrap();
+        let re = Regex::new(r"^((?P<ordered>\d+[.)] )|(?P<unordered>[-*] ))(.+)").unwrap();
         let caps = re.captures(line);
         if let Some(mat) = caps {
             let left_text = mat.get(mat.len() - 1).unwrap().as_str();
             let inline_tokens = InlineToken::tokenizer(left_text);
             if let Some(_) = mat.name("ordered") {
-                let token = OrderedList::new(inline_tokens);
+                let mut chars = line.chars();
+                let order = chars.next().unwrap();
+                let symbol = chars.next().unwrap();
+                let token = OrderedList::new(order, symbol, inline_tokens);
                 Some(LineToken::OrderedList(token))
             } else {
                 let symbol = line.chars().next().unwrap();
@@ -52,8 +54,8 @@ impl LineToken {
         let last = &tokens.last();
         if let Some(LineToken::UnorderedListBlock(t)) = last {
             t.get_symbol()
-        } else if let Some(LineToken::OrderedListBlock(_)) = last {
-            ORDERED_LIST
+        } else if let Some(LineToken::OrderedListBlock(t)) = last {
+            t.get_symbol()
         } else {
             NOT_LIST
         }
@@ -63,8 +65,8 @@ impl LineToken {
         let prev = LineToken::is_prev_list(tokens);
         if let LineToken::UnorderedList(t) = token {
             return t.symbol == prev;
-        } else if let LineToken::OrderedList(_) = token {
-            return prev == ORDERED_LIST;
+        } else if let LineToken::OrderedList(t) = token {
+            return prev == t.symbol;
         }
         return false;
     }
@@ -171,13 +173,17 @@ impl Quote {
 
 #[derive(Debug)]
 pub struct OrderedListBlock {
+    pub start: char,
+    pub symbol: char,
     pub lists: Vec<LineToken>,
 }
 
 impl OrderedListBlock {
     pub fn new(token: LineToken) -> Self {
-        if let LineToken::OrderedList(_) = token {
-            Self { lists: vec![token] }
+        if let LineToken::OrderedList(ref t) = token {
+            let symbol = t.symbol;
+            let start = t.order;
+            Self { start, symbol, lists: vec![token] }
         } else {
             panic!()
         }
@@ -188,6 +194,10 @@ impl OrderedListBlock {
             LineToken::OrderedList(_) => self.lists.push(token),
             _ => panic!(),
         }
+    }
+
+    pub fn get_symbol(&self) -> char {
+        self.symbol
     }
 }
 
@@ -224,12 +234,14 @@ impl UnorderedListBlock {
 
 #[derive(Debug)]
 pub struct OrderedList {
+    pub order: char,
+    pub symbol: char,
     pub inline_tokens: Vec<InlineToken>,
 }
 
 impl OrderedList {
-    pub fn new(inline_tokens: Vec<InlineToken>) -> Self {
-        Self { inline_tokens }
+    pub fn new(order: char, symbol: char, inline_tokens: Vec<InlineToken>) -> Self {
+        Self { order, symbol, inline_tokens }
     }
 }
 
@@ -330,14 +342,19 @@ pub mod tests {
         if LineToken::is_list("* ").is_some() {
             panic!();
         }
+        if LineToken::is_list("1)this").is_some() {
+            panic!();
+        }
     }
 
     #[test]
     fn test_is_prev_list() {
         let tokens = vec![LineToken::OrderedListBlock(OrderedListBlock {
+            start: '1',
+            symbol: ')',
             lists: vec![],
         })];
-        assert_eq!(LineToken::is_prev_list(&tokens), ORDERED_LIST);
+        assert_eq!(LineToken::is_prev_list(&tokens), ')');
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
         let tokens = vec![LineToken::UnorderedListBlock(UnorderedListBlock {
             symbol: '*',
@@ -353,7 +370,22 @@ pub mod tests {
     }
 
     #[test]
-    fn test_is_prev_same_block() {
+    fn test_is_prev_same_block_unordered_list() {
+        let ordered_list = LineToken::OrderedList(OrderedList::new('1', '.', vec![]));
+        let block = &vec![LineToken::OrderedListBlock(OrderedListBlock::new(
+            ordered_list,
+        ))];
+        let ordered_list = LineToken::OrderedList(OrderedList::new('2', '.', vec![]));
+        assert!(LineToken::same_list_block_as_prev(&ordered_list, block));
+        let ordered_list = LineToken::OrderedList(OrderedList::new('3', ')', vec![]));
+        assert_eq!(
+            false,
+            LineToken::same_list_block_as_prev(&ordered_list, block)
+        );
+    }
+
+    #[test]
+    fn test_is_prev_same_block_ordered_list() {
         let unordered_list = LineToken::UnorderedList(UnorderedList::new('*', vec![]));
         let block = &vec![LineToken::UnorderedListBlock(UnorderedListBlock::new(
             unordered_list,
@@ -617,6 +649,57 @@ pub mod tests {
             panic!();
         }
     }
+
+
+    #[test]
+    fn test_ordered_list_with_parentheses() {
+        let text = "1) this\n2) is\n3) a\n4) test";
+        let result = Tokenizer::tokenizer(text);
+        assert_eq!(result.len(), 1);
+        if let LineToken::OrderedListBlock(token) = &result[0] {
+            let list = &token.lists;
+            assert_eq!(list.len(), 4);
+            if let LineToken::OrderedList(token) = &list[0] {
+                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                    assert_eq!(token.text, "this");
+                } else {
+                    panic!();
+                }
+            } else {
+                panic!();
+            }
+            if let LineToken::OrderedList(token) = &list[1] {
+                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                    assert_eq!(token.text, "is");
+                } else {
+                    panic!();
+                }
+            } else {
+                panic!();
+            }
+            if let LineToken::OrderedList(token) = &list[2] {
+                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                    assert_eq!(token.text, "a");
+                } else {
+                    panic!();
+                }
+            } else {
+                panic!();
+            }
+            if let LineToken::OrderedList(token) = &list[3] {
+                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
+                    assert_eq!(token.text, "test");
+                } else {
+                    panic!();
+                }
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
+
 
     #[test]
     fn test_unordered_list() {
