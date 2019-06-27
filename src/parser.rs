@@ -179,7 +179,6 @@ mod test {
     pub use super::*;
     use crate::tokenizer::CodeBlock;
     use crate::tokenizer::LinkToken;
-    use crate::tokenizer::NoteToken;
 
     pub fn text_token_factory(text: String) -> InlineToken {
         let t = TextToken { text };
