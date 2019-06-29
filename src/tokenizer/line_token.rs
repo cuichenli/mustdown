@@ -13,7 +13,7 @@ pub enum LineToken {
     OrderedList(OrderedList),
     UnorderedList(UnorderedList),
     NoteToken(NoteToken),
-    HorizontalRule
+    HorizontalRule,
 }
 
 const NOT_LIST: char = 'a';
@@ -193,7 +193,11 @@ impl OrderedListBlock {
         if let LineToken::OrderedList(ref t) = token {
             let symbol = t.symbol;
             let start = t.order;
-            Self { start, symbol, lists: vec![token] }
+            Self {
+                start,
+                symbol,
+                lists: vec![token],
+            }
         } else {
             panic!()
         }
@@ -251,7 +255,11 @@ pub struct OrderedList {
 
 impl OrderedList {
     pub fn new(order: char, symbol: char, inline_tokens: Vec<InlineToken>) -> Self {
-        Self { order, symbol, inline_tokens }
+        Self {
+            order,
+            symbol,
+            inline_tokens,
+        }
     }
 }
 
@@ -277,7 +285,6 @@ pub struct NoteToken {
 }
 
 impl NoteToken {
-
     pub fn new(name: String, link: String) -> Self {
         Self { name, link }
     }
@@ -306,6 +313,59 @@ pub mod tests {
             panic!();
         }
     }
+
+    pub fn assert_unordered_lists(tokens: &LineToken, texts: Vec<&str>, symbol: char) {
+        if let LineToken::UnorderedListBlock(token) = tokens {
+            assert_eq!(token.symbol, symbol);
+            assert_eq!(token.lists.len(), texts.len());
+            for (i, line) in token.lists.iter().enumerate() {
+                if let LineToken::UnorderedList(t) = line {
+                    assert_text_token(&t.inline_tokens[0], texts[i]);
+                } else {
+                    panic!();
+                }
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn assert_ordered_lists(tokens: &LineToken, texts: Vec<&str>, start: char, symbol: char) {
+        if let LineToken::OrderedListBlock(token) = tokens {
+            assert_eq!(token.start, start);
+            assert_eq!(token.symbol, symbol);
+            assert_eq!(token.lists.len(), texts.len());
+            for (i, line) in token.lists.iter().enumerate() {
+                if let LineToken::OrderedList(t) = line {
+                    assert_text_token(&t.inline_tokens[0], texts[i]);
+                } else {
+                    panic!();
+                }
+            }
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn assert_paragraph_with_single_text(token: &LineToken, text: &str) {
+        if let LineToken::Paragraph(token) = token {
+            let tokens = &token.inline_tokens;
+            assert_eq!(tokens.len(), 1);
+            assert_text_token(&tokens[0], text);
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn assert_note_token(token: &LineToken, name: &str, link: &str) {
+        if let LineToken::NoteToken(token) = token {
+            assert_eq!(token.name, name);
+            assert_eq!(token.link, link);
+        } else {
+            panic!()
+        }
+    }
+
     #[test]
     fn test_is_list() {
         let l = "- this";
@@ -460,14 +520,7 @@ pub mod tests {
         }
 
         let token = result.last().unwrap();
-        if let LineToken::Paragraph(token) = token {
-            assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = token.inline_tokens.first().unwrap() {
-                assert_eq!(token.text, "this is another test")
-            }
-        } else {
-            panic!();
-        }
+        assert_paragraph_with_single_text(token, "this is another test");
     }
 
     #[test]
@@ -478,21 +531,13 @@ pub mod tests {
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
             assert_eq!(inline_tokens.len(), 3);
-            if let InlineToken::TextToken(token) = &inline_tokens[0] {
-                assert_eq!(token.text, "this is  ");
-            } else {
-                panic!();
-            }
+            assert_text_token(&inline_tokens[0], "this is  ");
             if let InlineToken::BreakToken = &inline_tokens[1] {
                 assert!(true);
             } else {
                 panic!();
             }
-            if let InlineToken::TextToken(token) = &inline_tokens[2] {
-                assert_eq!(token.text, "a quote");
-            } else {
-                panic!();
-            }
+            assert_text_token(&inline_tokens[2], "a quote");
         } else {
             panic!();
         }
@@ -506,11 +551,7 @@ pub mod tests {
         if let LineToken::Quote(token) = &result[0] {
             let inline_tokens = &token.inline_tokens;
             assert_eq!(inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &inline_tokens[0] {
-                assert_eq!(token.text, "this is");
-            } else {
-                panic!();
-            }
+            assert_text_token(&inline_tokens[0], "this is");
         } else {
             panic!();
         }
@@ -538,27 +579,10 @@ pub mod tests {
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "a quote");
-            }
+            assert_text_token(&token.inline_tokens[0], "a quote");
         }
-
-        if let LineToken::Paragraph(token) = &result[0] {
-            assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "first paragraph");
-            }
-        } else {
-            panic!();
-        }
-        if let LineToken::Paragraph(token) = &result[2] {
-            assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "second paragraph");
-            }
-        } else {
-            panic!();
-        }
+        assert_paragraph_with_single_text(&result[0], "first paragraph");
+        assert_paragraph_with_single_text(&result[2], "second paragraph");
     }
 
     #[test]
@@ -568,35 +592,16 @@ pub mod tests {
         assert_eq!(result.len(), 3);
         if let LineToken::Quote(token) = &result[1] {
             assert_eq!(token.inline_tokens.len(), 3);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "a quote  ");
-            }
-            if let InlineToken::TextToken(token) = &token.inline_tokens[2] {
-                assert_eq!(token.text, "another quote");
-            }
+            assert_text_token(&token.inline_tokens[0], "a quote  ");
+            assert_text_token(&token.inline_tokens[2], "another quote");
             if let InlineToken::BreakToken = &token.inline_tokens[1] {
                 assert!(true);
             } else {
                 panic!();
             }
         }
-
-        if let LineToken::Paragraph(token) = &result[0] {
-            assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "first paragraph");
-            }
-        } else {
-            panic!();
-        }
-        if let LineToken::Paragraph(token) = &result[2] {
-            assert_eq!(token.inline_tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                assert_eq!(token.text, "second paragraph");
-            }
-        } else {
-            panic!();
-        }
+        assert_paragraph_with_single_text(&result[0], "first paragraph");
+        assert_paragraph_with_single_text(&result[2], "second paragraph");
     }
 
     #[test]
@@ -616,148 +621,31 @@ pub mod tests {
         let text = "1. this\n2. is\n3. a\n4. test";
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
-        if let LineToken::OrderedListBlock(token) = &result[0] {
-            let list = &token.lists;
-            assert_eq!(list.len(), 4);
-            if let LineToken::OrderedList(token) = &list[0] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "this");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[1] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "is");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[2] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "a");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[3] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "test");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
+        assert_ordered_lists(&result[0], vec!["this", "is", "a", "test"], '1', '.');
     }
-
 
     #[test]
     fn test_ordered_list_with_parentheses() {
         let text = "1) this\n2) is\n3) a\n4) test";
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
-        if let LineToken::OrderedListBlock(token) = &result[0] {
-            let list = &token.lists;
-            assert_eq!(list.len(), 4);
-            if let LineToken::OrderedList(token) = &list[0] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "this");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[1] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "is");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[2] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "a");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &list[3] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "test");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
+        assert_ordered_lists(&result[0], vec!["this", "is", "a", "test"], '1', ')');
     }
 
+    #[test]
+    fn test_ordered_list_with_start_is_2() {
+        let text = "2) this\n3) is\n4) a\n5) test";
+        let result = Tokenizer::tokenizer(text);
+        assert_eq!(result.len(), 1);
+        assert_ordered_lists(&result[0], vec!["this", "is", "a", "test"], '2', ')');
+    }
 
     #[test]
     fn test_unordered_list() {
         let text = "- this\n- is\n- a\n- test";
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 1);
-        if let LineToken::UnorderedListBlock(token) = &result[0] {
-            let list = &token.lists;
-            assert_eq!(list.len(), 4);
-            if let LineToken::UnorderedList(token) = &list[0] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "this");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::UnorderedList(token) = &list[1] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "is");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::UnorderedList(token) = &list[2] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "a");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::UnorderedList(token) = &list[3] {
-                if let InlineToken::TextToken(token) = &token.inline_tokens[0] {
-                    assert_eq!(token.text, "test");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
+        assert_unordered_lists(&result[0], vec!["this", "is", "a", "test"], '-');
     }
 
     #[test]
@@ -774,58 +662,9 @@ pub mod tests {
         let text = "a simple line\n- a list\n- another\ntest";
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
-        if let LineToken::Paragraph(token) = &result[0] {
-            let tokens = &token.inline_tokens;
-            assert_eq!(tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &tokens[0] {
-                assert_eq!(token.text, "a simple line");
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-
-        if let LineToken::UnorderedListBlock(token) = &result[1] {
-            let tokens = &token.lists;
-            assert_eq!(tokens.len(), 2);
-            if let LineToken::UnorderedList(token) = &tokens[0] {
-                let list = &token.inline_tokens;
-                assert_eq!(list.len(), 1);
-                if let InlineToken::TextToken(token) = &list[0] {
-                    assert_eq!(token.text, "a list");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::UnorderedList(token) = &tokens[1] {
-                let list = &token.inline_tokens;
-                assert_eq!(list.len(), 1);
-                if let InlineToken::TextToken(token) = &list[0] {
-                    assert_eq!(token.text, "another");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-
-        if let LineToken::Paragraph(token) = &result[2] {
-            let tokens = &token.inline_tokens;
-            assert_eq!(tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &tokens[0] {
-                assert_eq!(token.text, "test");
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
+        assert_paragraph_with_single_text(&result[0], "a simple line");
+        assert_paragraph_with_single_text(&result[2], "test");
+        assert_unordered_lists(&result[1], vec!["a list", "another"], '-');
     }
 
     #[test]
@@ -833,67 +672,9 @@ pub mod tests {
         let text = "a simple line\n1. a list\n2. another\ntest";
         let result = Tokenizer::tokenizer(text);
         assert_eq!(result.len(), 3);
-        if let LineToken::Paragraph(token) = &result[0] {
-            let tokens = &token.inline_tokens;
-            assert_eq!(tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &tokens[0] {
-                assert_eq!(token.text, "a simple line");
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-
-        if let LineToken::OrderedListBlock(token) = &result[1] {
-            let tokens = &token.lists;
-            assert_eq!(tokens.len(), 2);
-            if let LineToken::OrderedList(token) = &tokens[0] {
-                let list = &token.inline_tokens;
-                assert_eq!(list.len(), 1);
-                if let InlineToken::TextToken(token) = &list[0] {
-                    assert_eq!(token.text, "a list");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-            if let LineToken::OrderedList(token) = &tokens[1] {
-                let list = &token.inline_tokens;
-                assert_eq!(list.len(), 1);
-                if let InlineToken::TextToken(token) = &list[0] {
-                    assert_eq!(token.text, "another");
-                } else {
-                    panic!();
-                }
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-
-        if let LineToken::Paragraph(token) = &result[2] {
-            let tokens = &token.inline_tokens;
-            assert_eq!(tokens.len(), 1);
-            if let InlineToken::TextToken(token) = &tokens[0] {
-                assert_eq!(token.text, "test");
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
-    }
-
-    pub fn assert_note_token(token: &LineToken, name: &str, link: &str) {
-        if let LineToken::NoteToken(token) = token {
-            assert_eq!(token.name, name);
-            assert_eq!(token.link, link);
-        } else {
-            panic!()
-        }
+        assert_paragraph_with_single_text(&result[0], "a simple line");
+        assert_paragraph_with_single_text(&result[2], "test");
+        assert_ordered_lists(&result[1], vec!["a list", "another"], '1', '.');
     }
 
     #[test]
@@ -904,7 +685,7 @@ pub mod tests {
             Some(token) => {
                 assert_note_token(&token, "1", "http://a.com");
             }
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
