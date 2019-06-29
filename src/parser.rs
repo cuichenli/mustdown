@@ -96,11 +96,11 @@ impl Parser {
                 result.push_str(&format!("</h{}>", level));
             }
             LineToken::Paragraph(token) => {
-                result.push_str(&format!("<p>\n"));
+                result.push_str(&"<p>\n");
                 for t in &token.inline_tokens {
                     result.push_str(self.inline_parse(t).as_str());
                 }
-                result.push_str(&format!("</p>\n"));
+                result.push_str(&"\n</p>");
             }
             LineToken::CodeBlock(token) => {
                 result.push_str("<pre><code>\n");
@@ -108,14 +108,14 @@ impl Parser {
                 result.push_str("\n</code></pre>");
             }
             LineToken::Quote(token) => {
-                result.push_str("<blockquote><p>");
+                result.push_str("<blockquote><p>\n");
                 for t in &token.inline_tokens {
                     result.push_str(&self.inline_parse(t));
                 }
-                result.push_str("</p></blockquote>")
+                result.push_str("\n</p></blockquote>")
             }
             LineToken::UnorderedListBlock(token) => {
-                result.push_str("<ul>");
+                result.push_str("<ul>\n");
                 for t in &token.lists {
                     result.push_str(&self.line_parse(t));
                 }
@@ -123,7 +123,7 @@ impl Parser {
             }
             LineToken::OrderedListBlock(token) => {
                 let start = token.start;
-                result.push_str(&format!("<ol start=\"{}\">", start));
+                result.push_str(&format!("<ol start=\"{}\">\n", start));
                 for t in &token.lists {
                     result.push_str(&self.line_parse(t));
                 }
@@ -148,6 +148,7 @@ impl Parser {
             }
             LineToken::NoteToken(_) => (),
         }
+        result.push_str("\n");
         result
     }
 
@@ -229,7 +230,7 @@ mod test {
 
         let token = LineToken::Paragraph(paragraph);
         let result = parser.line_parse(&token);
-        assert_eq!("<p>\nthis is a test</p>\n", result);
+        assert_eq!("<p>\nthis is a test\n</p>\n", result);
     }
 
     #[test]
@@ -249,7 +250,7 @@ mod test {
         };
         let parser = Parser::new();
         let result = parser.line_parse(&LineToken::Paragraph(token));
-        assert_eq!("<p>\nthis is a test<em>another test</em></p>\n", result);
+        assert_eq!("<p>\nthis is a test<em>another test</em>\n</p>\n", result);
     }
 
     #[test]
@@ -291,7 +292,7 @@ mod test {
         });
         let result = parser.line_parse(&token);
         assert_eq!(
-            "<p>\nthis is a test<strong>another test</strong></p>\n",
+            "<p>\nthis is a test<strong>another test</strong>\n</p>\n",
             result
         );
     }
@@ -320,7 +321,7 @@ mod test {
         });
         let result = parser.line_parse(&token);
         assert_eq!(
-            "<p>\nthis is a test<strong>another test</strong><em>another test</em></p>\n",
+            "<p>\nthis is a test<strong>another test</strong><em>another test</em>\n</p>\n",
             result
         );
     }
@@ -331,7 +332,7 @@ mod test {
         let text = "this\nis\na\ntest";
         let token = CodeBlock::new(text.to_string());
         let result = parser.line_parse(&LineToken::CodeBlock(token));
-        assert_eq!("<pre><code>\nthis\nis\na\ntest\n</code></pre>", result);
+        assert_eq!("<pre><code>\nthis\nis\na\ntest\n</code></pre>\n", result);
     }
 
     #[test]
@@ -368,7 +369,7 @@ mod test {
         })];
         let quote_token = Quote { inline_tokens };
         let result = parser.line_parse(&LineToken::Quote(quote_token));
-        assert_eq!(result, "<blockquote><p>text token</p></blockquote>");
+        assert_eq!(result, "<blockquote><p>\ntext token\n</p></blockquote>\n");
     }
 
     #[test]
@@ -382,7 +383,10 @@ mod test {
         ];
         let quote_token = Quote { inline_tokens };
         let result = parser.line_parse(&LineToken::Quote(quote_token));
-        assert_eq!(result, "<blockquote><p>text token<br></p></blockquote>");
+        assert_eq!(
+            result,
+            "<blockquote><p>\ntext token<br>\n</p></blockquote>\n"
+        );
     }
 
     #[test]
@@ -401,7 +405,7 @@ mod test {
         let result = parser.line_parse(&LineToken::Quote(quote_token));
         assert_eq!(
             result,
-            "<blockquote><p>text token<br>another token</p></blockquote>"
+            "<blockquote><p>\ntext token<br>another token\n</p></blockquote>\n"
         );
     }
 
@@ -427,7 +431,7 @@ mod test {
         let result = parser.line_parse(&LineToken::Quote(quote_token));
         assert_eq!(
             result,
-            "<blockquote><p>text token<br>another token<em>another test</em></p></blockquote>"
+            "<blockquote><p>\ntext token<br>another token<em>another test</em>\n</p></blockquote>\n"
         );
     }
 
@@ -455,7 +459,10 @@ mod test {
             ],
         };
         let result = parser.line_parse(&LineToken::OrderedListBlock(token));
-        assert_eq!(result, "<ol start=\"1\"><li>first</li><li>second</li></ol>");
+        assert_eq!(
+            result,
+            "<ol start=\"1\">\n<li>first</li>\n<li>second</li>\n</ol>\n"
+        );
     }
 
     #[test]
@@ -479,7 +486,7 @@ mod test {
             ],
         };
         let result = parser.line_parse(&LineToken::UnorderedListBlock(token));
-        assert_eq!(result, "<ul><li>first</li><li>second</li></ul>");
+        assert_eq!(result, "<ul>\n<li>first</li>\n<li>second</li>\n</ul>\n");
     }
 
     #[test]
@@ -489,7 +496,7 @@ mod test {
         let result = parser.parse(text);
         assert_eq!(parser.notes.len(), 1);
         assert_eq!(parser.notes["link"], "http://a.com");
-        assert_eq!(result, "<p>\n<a href=\"http://a.com\">alt</a></p>\n");
+        assert_eq!(result, "<p>\n<a href=\"http://a.com\">alt</a>\n</p>\n\n");
     }
 
     #[test]
@@ -499,7 +506,10 @@ mod test {
         let result = parser.parse(text);
         assert_eq!(parser.notes.len(), 1);
         assert_eq!(parser.notes["link"], "http://a.com");
-        assert_eq!(result, "<p>\n<img src=\"http://a.com\" alt=\"alt\"></p>\n");
+        assert_eq!(
+            result,
+            "<p>\n<img src=\"http://a.com\" alt=\"alt\">\n</p>\n\n"
+        );
     }
 
     #[test]
@@ -507,6 +517,6 @@ mod test {
         let token = LineToken::HorizontalRule;
         let parser = Parser::new();
         let result = parser.line_parse(&token);
-        assert_eq!("<hr>", result);
+        assert_eq!("<hr>\n", result);
     }
 }
