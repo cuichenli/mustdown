@@ -7,8 +7,8 @@ pub use inline_token::{
     DoubleSpecialToken, ImageToken, InlineToken, LinkToken, SpecialToken, TextToken,
 };
 pub use line_token::{
-    CodeBlock, HeaderToken, LineToken, OrderedList, OrderedListBlock, Paragraph, Quote,
-    UnorderedList, UnorderedListBlock, NoteToken
+    CodeBlock, HeaderToken, LineToken, NoteToken, OrderedList, OrderedListBlock, Paragraph, Quote,
+    UnorderedList, UnorderedListBlock,
 };
 
 pub struct Tokenizer {}

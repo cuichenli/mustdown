@@ -187,7 +187,11 @@ pub struct LinkToken {
 
 impl LinkToken {
     pub fn new(alt: String, link: String, need_note: bool) -> Self {
-        Self { alt, link, need_note }
+        Self {
+            alt,
+            link,
+            need_note,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -236,7 +240,11 @@ pub struct ImageToken {
 
 impl ImageToken {
     pub fn new(alt: String, link: String, need_note: bool) -> Self {
-        Self { alt, link, need_note }
+        Self {
+            alt,
+            link,
+            need_note,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -502,23 +510,9 @@ pub mod tests {
         let text = "this is [Link](to_test) to test";
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 3);
-        let token = &result[0];
-        if let InlineToken::TextToken(token) = token {
-            assert_eq!(token.text, "this is ");
-        } else {
-            panic!();
-        }
-        if let InlineToken::LinkToken(token) = &result[1] {
-            assert_eq!(token.alt, "Link");
-            assert_eq!(token.link, "to_test");
-        } else {
-            panic!()
-        }
-        if let InlineToken::TextToken(token) = &result[2] {
-            assert_eq!(token.text, " to test");
-        } else {
-            panic!()
-        }
+        assert_text_token(&result[0], "this is ");
+        assert_link_token(&result[1], "Link", "to_test", false);
+        assert_text_token(&result[2], " to test");
     }
 
     #[test]
@@ -527,14 +521,6 @@ pub mod tests {
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 1);
         assert_image_token(&result[0], "Link", "http://a.com", false);
-        // let token = &result[0];
-        // match token {
-        //     InlineToken::ImageToken(token) => {
-        //         assert_eq!(token.alt, "Link");
-        //         assert_eq!(token.link, "http://a.com");
-        //     }
-        //     _ => panic!(),
-        // };
     }
 
     #[test]
@@ -543,14 +529,6 @@ pub mod tests {
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 1);
         assert_image_token(&result[0], "Link", "1", true);
-        // let token = &result[0];
-        // match token {
-        //     InlineToken::ImageToken(token) => {
-        //         assert_eq!(token.alt, "Link");
-        //         assert_eq!(token.link, "http://a.com");
-        //     }
-        //     _ => panic!(),
-        // };
     }
 
     #[test]
@@ -558,23 +536,9 @@ pub mod tests {
         let text = "this is ![Link](to_test) to test";
         let result = InlineToken::tokenizer(text);
         assert_eq!(result.len(), 3);
-        let token = &result[0];
-        if let InlineToken::TextToken(token) = token {
-            assert_eq!(token.text, "this is ");
-        } else {
-            panic!();
-        }
-        if let InlineToken::ImageToken(token) = &result[1] {
-            assert_eq!(token.alt, "Link");
-            assert_eq!(token.link, "to_test");
-        } else {
-            panic!()
-        }
-        if let InlineToken::TextToken(token) = &result[2] {
-            assert_eq!(token.text, " to test");
-        } else {
-            panic!()
-        }
+        assert_text_token(&result[0], "this is ");
+        assert_image_token(&result[1], "Link", "to_test", false);
+        assert_text_token(&result[2], " to test");
     }
 
     #[test]

@@ -9,12 +9,11 @@ pub use super::tokenizer::Tokenizer;
 
 use std::collections::HashMap;
 
-
 pub struct Parser {
     notes: HashMap<String, String>,
 }
 
-impl Parser  {
+impl Parser {
     pub fn new() -> Self {
         let notes = HashMap::new();
         Self { notes }
@@ -66,9 +65,7 @@ impl Parser  {
                 } else {
                     link = &token.link;
                 }
-                result.push_str(
-                    format!("<img src=\"{}\" alt=\"{}\">", link, token.alt).as_str(),
-                );
+                result.push_str(format!("<img src=\"{}\" alt=\"{}\">", link, token.alt).as_str());
             }
             InlineToken::LinkToken(token) => {
                 let link: &String;
@@ -149,7 +146,7 @@ impl Parser  {
             LineToken::HorizontalRule => {
                 result.push_str("<hr>");
             }
-            LineToken::NoteToken(_) => ()
+            LineToken::NoteToken(_) => (),
         }
         result
     }
