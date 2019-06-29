@@ -199,7 +199,7 @@ impl LinkToken {
     }
 
     pub fn try_tokenize_with_real_link(text: &str) -> Option<LinkToken> {
-        let re = Regex::new(r"\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"\[([^\]]*)\]\(([^)]*?)\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
@@ -210,7 +210,7 @@ impl LinkToken {
     }
 
     pub fn try_tokenize_with_need_note(text: &str) -> Option<LinkToken> {
-        let re = Regex::new(r"\[(.*)\]\[(.*)\]").unwrap();
+        let re = Regex::new(r"\[([^\]]*)\]\[([^\]]*)\]").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
@@ -252,7 +252,7 @@ impl ImageToken {
     }
 
     pub fn try_tokenize_with_real_link(text: &str) -> Option<ImageToken> {
-        let re = Regex::new(r"!\[(.*)\]\((.*)\)").unwrap();
+        let re = Regex::new(r"!\[([^\]]*)\]\(([^)]*?)?\)").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
@@ -262,7 +262,7 @@ impl ImageToken {
     }
 
     pub fn try_tokenize_with_need_note(text: &str) -> Option<ImageToken> {
-        let re = Regex::new(r"!\[(.*)\]\[(.*)\]").unwrap();
+        let re = Regex::new(r"!\[([^\]]*)\]\[(.*)?\]").unwrap();
         let caps = re.captures(text);
         if let Some(mat) = caps {
             let (alt, link) = InlineToken::get_alt_and_link(&mat);
